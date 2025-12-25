@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>RaceBox Pro 完整校准版</title>
+    <style>
+        :root { --accent: #00ffcc; --bg: #000; --card: #1a1a1a; }
+        body { font-family: system-ui, sans-serif; background: var(--bg); color: white; display: flex; flex-direction: column; align-items: center; margin: 0; padding: env(safe-area-inset-top) 15px 80px 15px; }
+        
+        /* G-Bowl 可视化 */
+        #gbowl-container { width: 260px; height: 260px; border: 2px solid #333; border-radius: 50%; position: relative; margin: 20px 0; background: radial-gradient(circle, #222 0%, #000 100%); }
+        .crosshair { position: absolute; background: #444; }
+        .ch-h { top: 50%; left: 0; width: 100%; height: 1px; }
+        .ch-v { left: 50%; top: 0; width: 1px; height: 100%; }
+        #g-dot { width: 14px; height: 14px; background: #ff3e3e; border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 15px #ff3e3e; transition: 0.05s linear; }
+
+        /* 数据网格 */
+        .dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; max-width: 400px; }
+        .card { background: var(--card); padding: 15px; border-radius: 12px; text-align: center; border: 1px solid #222; }
+        .value { font-size: 1.5em; font-weight: bold; color: var(--accent); }
+        .unit { font-size: 0.7em; color: #888; }
+
+        /* 底部控制栏 */
+        .controls { position: fixed; bottom: 0; left: 0; right: 0; display: flex; gap: 10px; padding: 15px; background: #111; border-top: 1px solid #222; }
+        button { flex: 1; padding: 15px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; }
+        #connectBtn { background: var(--accent); color: #000; }
+        #disconnectBtn { background: #333; color: #eee; display: none; }
+        #calibBtn { background: #444; color: white; }
+
+        /* 引导弹窗 */
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 100; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 30px; }
+        .step-info { font-size: 1.2em; margin-bottom: 20px; line-height: 1.5; }
+        .progress-bar { width: 100%; height: 6px; background: #333; border-radius: 3px; overflow: hidden; margin: 20px 0; }
+        #progress-inner { width: 0%; height: 100%; background: var(--accent); transition: 0.3s; }
+    </style>
+</head>
+<body>
+
+    <h2 style="color: var(--accent); margin-bottom: 5px;">RACEBOX <span style="font-weight: 200;">LIVE</span></h2>
+    <div id="status" style="font-size: 0.8em; color: #888;">蓝牙未连接</div>
+
+    <div id="gbowl-container">
+        <div class="crosshair ch-h"></div>
+        <div class="crosshair ch-v"></div>
+        <div id="g-dot"></div>
+    </div>
+
+    <div class="dashboard">
+        <div class="card"><div>速度</div><div id="speed" class="value">0.0</div><div class="unit">km/h</div></div>
+        <div class="card"><div>卫星</div><div id="svs" class="value">0</div><div class="unit">SVs</div></div>
+        <div class="card"><div>电池</div><div id="bat" class="value">--</div><div class="unit">Battery</div></div>
+        <div class="card"><div>校准状态</div><div id="cal-status" class="value" style="font-size: 1em;">已存储</div><div class="unit">Status</div></div>
+    </div>
+
+    <div class="controls">
+        <button id="connectBtn">连接设备</button>
+        <button id="disconnectBtn">断开连接</button>
+        <button id="calibBtn">开始全流程校准</button>
+    </div>
+
+    <div id="calibModal" class="modal">
+        <div id="step-content">
+            <div class="step-info" id="step-text">第一步：水平校准<br><small>请将车辆停在平地并保持静止</small></div>
+            <div id="step-subtext" style="color: #888; font-size: 0.9em;">准备中...</div>
+            <div class="progress-bar"><div id="progress-inner"></div></div>
+        </div>
+        <button id="cancelCalBtn" style="background: transparent; color: #666; width: auto;">取消校准</button>
+    </div>
+
+<script>
+    const SERVICE_UUID = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
+    const TX_CHARACTERISTIC_UUID = '6e400003-b5a3-f393-e0a9-e50e24dcca9e';
+
+    let bluetoothDevice = null;
+    let rxChar = null;
+    let buffer = new Uint8Array(0);
+
+    // 校准状态
+    let calibrationStep = 0; // 0:正常, 1:静态中, 2:动态中
+    let samples = [];
+    let offsets = JSON.parse(localStorage.getItem('rb_offsets')) || { x: 0, y: 0, z: 1000 };
+    let forwardVector = JSON.parse(localStorage.getItem('rb_forward')) || { x: 1, y: 0 }; // 默认X轴为车头
+
+    // --- 蓝牙连接控制 ---
+    document.getElementById('connectBtn').onclick = async () => {
+        try {
+            bluetoothDevice = await navigator.bluetooth.requestDevice({
+                filters: [{ namePrefix: 'RaceBox ' }],
+                optionalServices: [SERVICE_UUID]
+            });
+
+            bluetoothDevice.addEventListener('gattserverdisconnected', onDisconnected);
+            const server = await bluetoothDevice.gatt.connect();
+            const service = await server.getPrimaryService(SERVICE_UUID);
+            rxChar = await service.getCharacteristic(TX_CHARACTERISTIC_UUID);
+
+            await rxChar.startNotifications();
+            rxChar.addEventListener('characteristicvaluechanged', handleData);
+
+            document.getElementById('status').innerText = "已连接: " + bluetoothDevice.name;
+            document.getElementById('connectBtn').style.display = "none";
+            document.getElementById('disconnectBtn').style.display = "block";
+        } catch (e) { console.error(e); }
+    };
+
+    document.getElementById('disconnectBtn').onclick = () => {
+        if (bluetoothDevice && bluetoothDevice.gatt.connected) {
+            bluetoothDevice.gatt.disconnect();
+        }
+    };
+
+    function onDisconnected() {
+        document.getElementById('status').innerText = "蓝牙已断开";
+        document.getElementById('connectBtn').style.display = "block";
+        document.getElementById('disconnectBtn').style.display = "none";
+        rxChar = null;
+    }
+
+    // --- 校准向导逻辑 ---
+    document.getElementById('calibBtn').onclick = startStep1;
+    document.getElementById('cancelCalBtn').onclick = () => {
+        calibrationStep = 0;
+        document.getElementById('calibModal').style.display = 'none';
+    };
+
+    function startStep1() {
+        if (!rxChar) return alert("请先连接蓝牙");
+        calibrationStep = 1;
+        samples = [];
+        document.getElementById('calibModal').style.display = 'flex';
+        document.getElementById('step-text').innerHTML = "第一步：水平校准<br><small>保持车辆静止，正在计算重心...</small>";
+        
+        let progress = 0;
+        let timer = setInterval(() => {
+            progress += 5;
+            document.getElementById('progress-inner').style.width = progress + "%";
+            if (progress >= 100) {
+                clearInterval(timer);
+                finishStep1();
+            }
+        }, 150);
+    }
+
+    function finishStep1() {
+        if (samples.length > 0) {
+            offsets.x = samples.reduce((a,b)=>a+b.x,0)/samples.length;
+            offsets.y = samples.reduce((a,b)=>a+b.y,0)/samples.length;
+            offsets.z = samples.reduce((a,b)=>a+b.z,0)/samples.length;
+            localStorage.setItem('rb_offsets', JSON.stringify(offsets));
+        }
+        startStep2();
+    }
+
+    function startStep2() {
+        calibrationStep = 2;
+        samples = [];
+        document.getElementById('progress-inner').style.width = "0%";
+        document.getElementById('step-text').innerHTML = "第二步：识别车头方向<br><small>请踩油门进行一段直线加速</small>";
+        document.getElementById('step-subtext').innerText = "等待检测到加速力...";
+    }
+
+    function finishStep2(detectedX, detectedY) {
+        // 计算单位矢量作为“车头方向”
+        const mag = Math.sqrt(detectedX*detectedX + detectedY*detectedY);
+        forwardVector = { x: detectedX / mag, y: detectedY / mag };
+        localStorage.setItem('rb_forward', JSON.stringify(forwardVector));
+        
+        calibrationStep = 0;
+        document.getElementById('calibModal').style.display = 'none';
+        document.getElementById('cal-status').innerText = "校准成功";
+        alert("校准完成！设备已识别安装角度。");
+    }
+
+    // --- 数据处理 ---
+    function handleData(event) {
+        let chunk = new Uint8Array(event.target.value.buffer);
+        let tmp = new Uint8Array(buffer.length + chunk.length);
+        tmp.set(buffer); tmp.set(chunk, buffer.length);
+        buffer = tmp;
+
+        while (buffer.length >= 8) {
+            if (buffer[0] !== 0xB5 || buffer[1] !== 0x62) {
+                buffer = buffer.slice(1); continue;
+            }
+            let len = buffer[4] | (buffer[5] << 8);
+            if (buffer.length < (len + 8)) break;
+            if (buffer[2] === 0xFF && buffer[3] === 0x01) {
+                decodeLive(buffer.slice(6, 6 + len));
+            }
+            buffer = buffer.slice(len + 8);
+        }
+    }
+
+    function decodeLive(payload) {
+        const dv = new DataView(payload.buffer, payload.byteOffset);
+        let raw = {
+            x: dv.getInt16(68, true),
+            y: dv.getInt16(70, true),
+            z: dv.getInt16(72, true)
+        };
+
+        if (calibrationStep === 1) samples.push(raw);
+        
+        // 核心：第二步逻辑 - 自动检测加速方向
+        if (calibrationStep === 2) {
+            let curX = raw.x - offsets.x;
+            let curY = raw.y - offsets.y;
+            let gMag = Math.sqrt(curX*curX + curY*curY);
+            document.getElementById('progress-inner').style.width = Math.min(100, (gMag/500)*100) + "%";
+            
+            // 当检测到持续超过 0.3g 的力时，记录为前进方向
+            if (gMag > 300) {
+                samples.push({x: curX, y: curY});
+                document.getElementById('step-subtext').innerText = "检测到推背感，请保持直线...";
+                if (samples.length > 30) { // 约 1.2 秒的数据
+                    let avgX = samples.reduce((a,b)=>a+b.x,0)/samples.length;
+                    let avgY = samples.reduce((a,b)=>a+b.y,0)/samples.length;
+                    finishStep2(avgX, avgY);
+                }
+            }
+        }
+
+        // --- 坐标投影计算 ---
+        // 1. 减去零位偏差
+        let gx_zeroed = raw.x - offsets.x;
+        let gy_zeroed = raw.y - offsets.y;
+
+        // 2. 使用第二步校准的矢量进行坐标旋转投影
+        // 车辆纵向 G = (测得矢量) 点乘 (前进方向矢量)
+        // 车辆横向 G = (测得矢量) 叉乘 (前进方向矢量)
+        let finalLongG = (gx_zeroed * forwardVector.x + gy_zeroed * forwardVector.y) / 1000;
+        let finalLatG = (gy_zeroed * forwardVector.x - gx_zeroed * forwardVector.y) / 1000;
+
+        // 更新 UI
+        document.getElementById('speed').innerText = (dv.getInt32(48, true) * 0.0036).toFixed(1);
+        document.getElementById('svs').innerText = dv.getUint8(23);
+        document.getElementById('bat').innerText = (dv.getUint8(67) & 0x7F) + "%";
+        
+        // 更新 G 球
+        const dot = document.getElementById('g-dot');
+        const limit = 1.2;
+        dot.style.left = `calc(50% + ${(finalLatG / limit) * 130}px)`;
+        dot.style.top = `calc(50% + ${(-finalLongG / limit) * 130}px)`;
+    }
+</script>
+</body>
+</html>
