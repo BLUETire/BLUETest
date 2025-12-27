@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>RaceBox Pro + Performance Test</title>
+    <title>RaceBox Pro + Acceleration Test</title>
     <style>
         :root { --accent: #00ffcc; --bg: #000; --card: #121212; --danger: #ff3e3e; --record: #ff4757; --test: #f1c40f; }
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -14,12 +14,10 @@
         .logo span { color: var(--accent); }
         #status-tag { font-size: 0.7rem; color: #666; border: 1px solid #333; padding: 2px 8px; border-radius: 10px; }
 
-        /* 采样面板增强：整合性能测试显示 */
         .rec-control-panel { width: 100%; background: #0a0a0a; border: 1px solid #222; border-radius: 16px; padding: 15px; margin-bottom: 12px; display: flex; flex-direction: column; gap: 10px; }
         .rec-row { display: flex; justify-content: space-between; align-items: center; }
         .rec-timer { font-family: "Courier New", monospace; font-size: 1.2rem; font-weight: bold; color: var(--accent); }
         
-        /* 性能测试小格 */
         .test-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 5px; }
         .test-slot { background: #111; padding: 10px; border-radius: 10px; border: 1px solid #222; text-align: center; }
         .test-slot.active { border-color: var(--test); box-shadow: 0 0 10px rgba(241,196,15,0.2); }
@@ -58,7 +56,6 @@
         .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.98); z-index: 1000; flex-direction: column; align-items: center; justify-content: center; padding: 40px; text-align: center; }
         .progress-track { width: 100%; height: 6px; background: #222; border-radius: 3px; margin: 30px 0; overflow: hidden; }
         #progress-fill { width: 0%; height: 100%; background: var(--accent); transition: 0.1s; }
-        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
     </style>
 </head>
 <body>
@@ -110,7 +107,7 @@
 
     <div class="actions">
         <div class="btn-row">
-            <button id="btn-test">NEW PERFORMANCE TEST</button>
+            <button id="btn-test">ACCELERATION TEST</button>
             <button id="btn-record">START LOGGING</button>
         </div>
         <div class="btn-row">
@@ -136,15 +133,15 @@
     let fwdVector = JSON.parse(localStorage.getItem('rb_fwd')) || {x:1, y:0};
     let calStep = 0, samples = [];
 
-    // 性能测试引擎
-    let testMode = 'IDLE'; // IDLE, READY, RUNNING, FINISHED
+    // 加速测试引擎
+    let testMode = 'IDLE'; 
     let testStartT = 0;
     let testResults = { t60: null, t100: null };
 
     document.getElementById('btn-test').onclick = () => {
         testMode = 'READY';
         testResults = { t60: null, t100: null };
-        document.getElementById('perf-status').innerText = "READY (WAITING FOR START)";
+        document.getElementById('perf-status').innerText = "READY (WAITING FOR LAUNCH)";
         document.getElementById('test-timer').innerText = "00:00.00";
         document.getElementById('res-060').innerText = "--.--s";
         document.getElementById('res-0100').innerText = "--.--s";
@@ -153,7 +150,6 @@
 
     function processPerformance() {
         if (testMode === 'READY') {
-            // 自动识别起步：加速度超过 0.15G 或 速度 > 0.5km/h
             if (state.longG > 0.15 || state.spd > 0.5) {
                 testMode = 'RUNNING';
                 testStartT = performance.now();
@@ -163,20 +159,17 @@
         if (testMode === 'RUNNING') {
             const elapsed = (performance.now() - testStartT) / 1000;
             document.getElementById('test-timer').innerText = formatPerfTime(elapsed);
-            
-            // 检查 60 节点
             if (!testResults.t60 && state.spd >= 60) {
                 testResults.t60 = elapsed;
                 document.getElementById('res-060').innerText = elapsed.toFixed(2) + "s";
                 document.getElementById('slot-060').classList.add('active');
             }
-            // 检查 100 节点
             if (!testResults.t100 && state.spd >= 100) {
                 testResults.t100 = elapsed;
                 document.getElementById('res-0100').innerText = elapsed.toFixed(2) + "s";
                 document.getElementById('slot-0100').classList.add('active');
                 testMode = 'FINISHED';
-                document.getElementById('perf-status').innerText = "TEST FINISHED";
+                document.getElementById('perf-status').innerText = "FINISHED";
             }
         }
     }
@@ -188,13 +181,11 @@
         return `${String(min).padStart(2,'0')}:${String(sec).padStart(2,'0')}.${String(ms).padStart(2,'0')}`;
     }
 
-    // 蓝牙与连接按钮逻辑
+    // 蓝牙连接
     document.getElementById('btn-connect').onclick = async function() {
         if (device && device.gatt.connected) {
             await device.gatt.disconnect();
-            this.innerText = "CONNECT";
-            this.classList.remove('connected');
-            document.getElementById('status-tag').innerText = "DISCONNECTED";
+            onDisconnected();
             return;
         }
         try {
@@ -208,11 +199,23 @@
                 tmp.set(buffer); tmp.set(chunk, buffer.length);
                 buffer = tmp; parsePackets();
             });
-            this.innerText = "DISCONNECT";
-            this.classList.add('connected');
-            document.getElementById('status-tag').innerText = "CONNECTED";
+            onConnected();
         } catch (e) { console.log(e); }
     };
+
+    function onConnected() {
+        const btn = document.getElementById('btn-connect');
+        btn.innerText = "DISCONNECT";
+        btn.classList.add('connected');
+        document.getElementById('status-tag').innerText = "CONNECTED";
+    }
+
+    function onDisconnected() {
+        const btn = document.getElementById('btn-connect');
+        btn.innerText = "CONNECT";
+        btn.classList.remove('connected');
+        document.getElementById('status-tag').innerText = "DISCONNECTED";
+    }
 
     function parsePackets() {
         while (buffer.length >= 8) {
@@ -227,10 +230,7 @@
     function decode(payload) {
         const dv = new DataView(payload.buffer, payload.byteOffset);
         let raw = { x: dv.getInt16(68, true), y: dv.getInt16(70, true), z: dv.getInt16(72, true) };
-        
-        // 校准检测 (保留双步逻辑)
         if(calStep > 0) handleCalibration(raw);
-
         let dx = raw.x - offsets.x, dy = raw.y - offsets.y;
         state.longG = (dx * fwdVector.x + dy * fwdVector.y) / 1000;
         state.latG = (dy * fwdVector.x - dx * fwdVector.y) / 1000;
@@ -239,7 +239,6 @@
         state.svs = dv.getUint8(23);
         state.bat = (dv.getUint8(67) & 0x7F) + "%";
 
-        // UI 渲染
         document.getElementById('speed').innerText = state.spd;
         document.getElementById('long-g').innerText = state.longG.toFixed(2);
         document.getElementById('lat-g').innerText = state.latG.toFixed(2);
@@ -250,19 +249,56 @@
         const dot = document.getElementById('g-dot');
         dot.style.left = `calc(50% + ${(state.latG / 1.2) * 130}px)`;
         dot.style.top = `calc(50% + ${(-state.longG / 1.2) * 130}px)`;
-
-        // 核心：处理性能测试逻辑
         processPerformance();
     }
 
-    // 高精度采样器 (保留原有逻辑)
+    // --- 音频优化逻辑 ---
+    let audioCtx, analyser;
+    document.getElementById('btn-audio').onclick = async function() {
+        if (!audioCtx) {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 512;
+                audioCtx.createMediaStreamSource(stream).connect(analyser);
+                this.innerText = "MIC ON"; this.style.color = "var(--accent)";
+                
+                // 循环检测，增加自愈逻辑
+                const updateSound = () => {
+                    if (!audioCtx || !analyser) return;
+                    // 如果上下文被挂起（可能是长时间未操作或切屏），尝试激活
+                    if (audioCtx.state === 'suspended') {
+                        audioCtx.resume();
+                    }
+                    
+                    const data = new Uint8Array(analyser.frequencyBinCount);
+                    analyser.getByteTimeDomainData(data);
+                    let sum = 0;
+                    for(let i=0; i<data.length; i++) {
+                        let v = (data[i] - 128) / 128;
+                        sum += v * v;
+                    }
+                    // 动态映射，增加微弱信号过滤
+                    let rms = Math.sqrt(sum / data.length);
+                    state.db = Math.floor(rms * 120 + 30); 
+                    if (state.db < 35) state.db = 35; // 环境底噪
+                    document.getElementById('db-value').innerText = state.db;
+                    requestAnimationFrame(updateSound);
+                };
+                updateSound();
+            } catch (e) { alert("Mic Access Denied"); }
+        }
+    };
+
+    // 数据记录
     let isRecording = false, logBuffer = [], logInterval = null;
     document.getElementById('btn-record').onclick = function() {
         if (!isRecording) {
             const freq = parseInt(document.getElementById('select-freq').value);
             isRecording = true; logBuffer = [];
             const startT = performance.now();
-            this.innerText = "STOP LOGGING"; this.style.background = "#333";
+            this.innerText = "STOP & SAVE"; this.style.background = "#333";
             logInterval = setInterval(() => {
                 const row = `${new Date().toISOString()},${((performance.now()-startT)/1000).toFixed(3)},${state.spd},${state.longG.toFixed(3)},${state.latG.toFixed(3)},${state.db}`;
                 logBuffer.push(row);
@@ -272,30 +308,11 @@
             this.innerText = "START LOGGING"; this.style.background = "var(--record)";
             const blob = new Blob(["UTC,RelTime,Speed,LongG,LatG,dB\n" + logBuffer.join("\n")], {type:'text/csv'});
             const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-            a.download = `Log_${Date.now()}.csv`; a.click();
+            a.download = `RaceLog_${Date.now()}.csv`; a.click();
         }
     };
 
-    // 音频检测 (保留)
-    let audioCtx;
-    document.getElementById('btn-audio').onclick = async function() {
-        if (!audioCtx) {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            audioCtx = new AudioContext();
-            const analyser = audioCtx.createAnalyser();
-            audioCtx.createMediaStreamSource(stream).connect(analyser);
-            this.innerText = "MIC ON"; this.style.color = "var(--accent)";
-            setInterval(() => {
-                const data = new Uint8Array(analyser.frequencyBinCount);
-                analyser.getByteTimeDomainData(data);
-                let sum = 0; for(let i=0; i<data.length; i++){ let v=(data[i]-128)/128; sum+=v*v; }
-                state.db = Math.floor(Math.sqrt(sum/data.length) * 100 + 40);
-                document.getElementById('db-value').innerText = state.db;
-            }, 100);
-        }
-    };
-
-    // 校准逻辑 (保留原始双步函数)
+    // 校准控制 (保持原逻辑)
     function handleCalibration(raw) {
         if (calStep === 1) {
             samples.push(raw);
