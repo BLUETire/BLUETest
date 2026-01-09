@@ -295,12 +295,33 @@
     }
 
     function saveCSV(fileName) {
-        isRecording = false; clearInterval(logInterval);
         if (logBuffer.length === 0) return;
-        const header = "Record,Time,Latitude,Longitude,Altitude,Speed,GForceX,GForceZ,Sound_dB\n";
-        const blob = new Blob([header + logBuffer.join("\n")], { type: 'text/csv' });
+        isRecording = false; 
+        clearInterval(logInterval);
+        
+        const header = "Record,Time,Latitude,Longitude,Altitude,Speed,GForceLat,GForceLong,Sound_dB\n";
+        const blob = new Blob([header + logBuffer.join("\n")], { type: 'text/csv;charset=utf-8;' });
+        
+        // 针对 iOS 的下载优化
+        const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.download = fileName; a.href = URL.createObjectURL(blob); a.click();
+        
+        // 某些版本的 iOS Safari 需要将元素添加到 DOM 才能触发 click
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        
+        a.href = url;
+        a.download = fileName;
+        
+        // 模拟点击
+        a.click();
+        
+        // 延迟移除和释放，确保浏览器已响应下载请求
+        setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }, 100);
+
         resetUI();
     }
 
