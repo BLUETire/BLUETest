@@ -3,38 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>车辆测试看板</title>
+    <title>车辆测试执行助手</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
         :root { --gray: #bdc3c7; --green: #2ecc71; --red: #e74c3c; --blue: #3498db; --dark: #2c3e50; }
-        body { font-family: -apple-system, system-ui, sans-serif; background: #f0f2f5; margin: 0; padding: 15px; color: var(--dark); }
+        body { font-family: -apple-system, system-ui, sans-serif; background: #f4f7f6; margin: 0; padding: 15px; -webkit-tap-highlight-color: transparent; }
         
-        .header { margin-bottom: 20px; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .header { margin-bottom: 20px; background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
         .controls { display: flex; gap: 10px; }
         
-        #kanban { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+        #kanban { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; }
         
         .card {
-            background: white; border-radius: 12px; padding: 15px; position: relative;
+            background: white; border-radius: 12px; padding: 12px; position: relative;
             box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-top: 6px solid var(--gray);
-            display: flex; flex-direction: column; justify-content: space-between; min-height: 100px;
+            display: flex; flex-direction: column; transition: all 0.2s; min-height: 90px;
         }
-        /* 状态颜色 */
-        .card.testing { border-top-color: var(--blue); background: #ebf5ff; animation: blink 1.5s infinite; }
+        /* 状态类 */
+        .card.testing { border-top-color: var(--blue); background: #f0f7ff; animation: pulse 1.5s infinite; }
         .card.pass { border-top-color: var(--green); }
         .card.fail { border-top-color: var(--red); }
         
-        .card h4 { margin: 5px 0; font-size: 15px; line-height: 1.4; }
-        .card .venue { font-size: 12px; color: #7f8c8d; font-weight: bold; }
-        .card .count { font-size: 11px; color: #95a5a6; margin-top: 4px; }
-        .comment-box { margin-top: 10px; padding-top: 8px; border-top: 1px dashed #ddd; font-size: 12px; color: #e67e22; word-break: break-all; }
+        .card h4 { margin: 8px 0 4px 0; font-size: 15px; color: #2c3e50; }
+        .card .tag { font-size: 11px; background: #eee; padding: 2px 6px; border-radius: 4px; display: inline-block; color: #7f8c8d; }
+        .card .count { font-size: 11px; color: #95a5a6; margin-top: auto; padding-top: 8px; }
+        .comment-display { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #ddd; font-size: 12px; color: #d35400; font-weight: 500; }
 
-        @keyframes blink { 50% { border-top-color: transparent; } }
+        @keyframes pulse { 50% { opacity: 0.7; } }
         
-        button { flex: 1; padding: 12px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; font-size: 14px; }
+        button { flex: 1; padding: 12px; border-radius: 10px; border: none; font-weight: bold; font-size: 14px; cursor: pointer; }
         .btn-load { background: var(--dark); color: white; }
         .btn-export { background: var(--green); color: white; display: none; }
-        
         input[type="file"] { display: none; }
     </style>
 </head>
@@ -42,119 +41,140 @@
 
     <div class="header">
         <div class="controls">
-            <button class="btn-load" onclick="document.getElementById('csvFile').click()">📂 加载工况表</button>
+            <button class="btn-load" onclick="document.getElementById('csvFile').click()">📂 加载 CSV 工况表</button>
             <button id="exportBtn" class="btn-export" onclick="exportResults()">💾 导出结果</button>
         </div>
         <input type="file" id="csvFile" accept=".csv">
     </div>
 
     <div id="kanban">
-        <div style="text-align: center; color: #999; grid-column: 1/-1; padding: 40px;">请先加载 CSV 文件</div>
+        <div style="text-align: center; color: #999; grid-column: 1/-1; padding: 50px 20px;">
+            请点击上方按钮加载您的测试表<br><small>(支持 Excel 导出的 GBK 格式)</small>
+        </div>
     </div>
 
 <script>
     let testData = [];
 
-    // 解析 CSV 文件
+    // 核心：处理文件加载
     document.getElementById('csvFile').addEventListener('change', function(e) {
         const file = e.target.files[0];
         if (!file) return;
 
-        Papa.parse(file, {
-            header: true,
-            skipEmptyLines: true,
-            transformHeader: h => h.trim().replace(/^\uFEFF/, ''), // 关键：去除 BOM 头和空格
-            complete: function(results) {
-                testData = results.data.map(item => ({
-                    // 确保即使字段名有微小差异也能读取
-                    venue: item['测试场地'] || item['场地'] || '未知',
-                    condition: item['测试工况'] || item['工况'] || '未知工况',
-                    count: item['测试次数'] || item['次数'] || '0',
-                    comment: item['Comment'] || item['备注'] || '',
-                    status: (item['Comment'] || item['备注']) ? 'completed' : 'pending'
-                }));
-                renderKanban();
-                document.getElementById('exportBtn').style.display = 'block';
-            }
-        });
+        // 使用 FileReader 先探测编码或强制读取
+        const reader = new FileReader();
+        reader.onload = function(evt) {
+            const content = evt.target.result;
+            
+            // 解析 CSV
+            Papa.parse(content, {
+                header: true,
+                skipEmptyLines: true,
+                // 清理表头隐藏字符和空格
+                transformHeader: h => h.trim().replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, ''), 
+                complete: function(results) {
+                    processData(results.data);
+                }
+            });
+        };
+        // iOS 兼容性：尝试以 GBK 读取以防止中文乱码
+        reader.readAsText(file, 'GBK'); 
     });
 
-    // 渲染界面
+    function processData(rawData) {
+        testData = rawData.map(item => {
+            // 灵活匹配字段名（防止 CSV 列名带空格或引号）
+            const venue = item['测试场地'] || item['场地'] || '未知';
+            const condition = item['测试工况'] || item['工况'] || '无内容';
+            const count = item['测试次数'] || item['次数'] || '0';
+            const comment = item['Comment'] || item['备注'] || '';
+            
+            return {
+                venue,
+                condition,
+                count,
+                comment,
+                status: comment ? 'completed' : 'pending'
+            };
+        });
+        renderKanban();
+        document.getElementById('exportBtn').style.display = 'block';
+    }
+
     function renderKanban() {
         const container = document.getElementById('kanban');
         container.innerHTML = '';
         
         testData.forEach((item, index) => {
             const card = document.createElement('div');
-            // 判断颜色类名
-            let statusClass = '';
-            if (item.status === 'testing') statusClass = 'testing';
+            
+            // 状态逻辑
+            let stateClass = '';
+            if (item.status === 'testing') stateClass = 'testing';
             else if (item.status === 'completed') {
-                statusClass = item.comment.toLowerCase().includes('pass') ? 'pass' : 'fail';
+                stateClass = item.comment.toLowerCase().includes('pass') ? 'pass' : 'fail';
             }
 
-            card.className = `card ${statusClass}`;
+            card.className = `card ${stateClass}`;
             card.innerHTML = `
-                <div>
-                    <div class="venue">📍 ${item.venue}</div>
-                    <h4>${item.condition}</h4>
-                    <div class="count">计划次数: ${item.count}</div>
-                </div>
-                ${item.comment ? `<div class="comment-box">📝 ${item.comment}</div>` : ''}
+                <div class="tag">${item.venue}</div>
+                <h4>${item.condition}</h4>
+                <div class="count">计划: ${item.count} 次</div>
+                ${item.comment ? `<div class="comment-display">注: ${item.comment}</div>` : ''}
             `;
 
-            card.onclick = () => handleAction(index);
+            card.onclick = () => handleCardInteraction(index);
             container.appendChild(card);
         });
     }
 
-    // 处理交互逻辑
-    function handleAction(index) {
+    function handleCardInteraction(index) {
         const item = testData[index];
 
         if (item.status === 'pending') {
-            // 状态 1: 开始测试
             item.status = 'testing';
-            renderKanban(); 
         } 
         else if (item.status === 'testing') {
-            // 状态 2: 结束并录入
-            const res = prompt("测试完成，请输入 Comment:\n(输入 pass 变绿，其他变红)", "pass");
-            if (res !== null) {
+            const res = prompt("请输入测试 Comment (输入 pass 变绿):", "pass");
+            if (res !== null && res.trim() !== "") {
                 item.comment = res;
                 item.status = 'completed';
-                renderKanban();
+            } else if (res === null) {
+                item.status = 'pending'; // 取消则回到待定
             }
         } 
         else if (item.status === 'completed') {
-            // 状态 3: 查看或修改
-            const res = prompt("当前备注如下，如需修改请输入:", item.comment);
+            // 修改已有的 Comment
+            const res = prompt("查看/修改备注:", item.comment);
             if (res !== null) {
                 item.comment = res;
-                renderKanban(); // 修复点：修改后立即重新渲染
+                // 确保状态依然是 completed
+                item.status = 'completed';
             }
         }
+        renderKanban(); // 立即刷新界面
     }
 
-    // 导出结果
     function exportResults() {
-        // 转换回原表格式
-        const exportMap = testData.map(item => ({
+        // 构建导出数组
+        const exportRows = testData.map(item => ({
             '测试场地': item.venue,
             '测试工况': item.condition,
             '测试次数': item.count,
             'Comment': item.comment
         }));
 
-        const csv = Papa.unparse(exportMap);
-        // \ufeff 解决 Excel 打开乱码问题
+        const csv = Papa.unparse(exportRows);
         const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
+        
+        // 兼容 iOS 的下载方式
         const a = document.createElement("a");
         a.href = url;
-        a.download = `测试记录_${new Date().toLocaleDateString()}.csv`;
+        a.download = `测试结果_${new Date().getHours()}${new Date().getMinutes()}.csv`;
+        document.body.appendChild(a);
         a.click();
-        URL.revokeObjectURL(url);
+        document.body.removeChild(a);
     }
 </script>
 </body>
