@@ -3,51 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>车辆测试极致版 v7</title>
+    <title>车辆测试极致版 v8</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
         :root { 
             --bg: #f2f2f7; --card-bg: #ffffff;
-            --pass: #34c759; --fail: #ff3b30;
-            --text-main: #1c1c1e; --text-sec: #8e8e93;
+            --pass-strong: #1a7f37; --pass-bg: #dcffe4;
+            --fail-strong: #cf222e; --fail-bg: #ffebe9;
+            --text-main: #1c1c1e; --text-sec: #6e6e73;
         }
-        body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 8px; color: var(--text-main); }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 10px; color: var(--text-main); }
         
-        .header { background: white; padding: 8px 12px; border-radius: 10px; margin-bottom: 8px; display: flex; align-items: center; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-        .btn-group { display: flex; gap: 6px; width: 100%; }
+        /* 顶部控制栏 */
+        .header { background: white; padding: 10px 12px; border-radius: 12px; margin-bottom: 10px; display: flex; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .btn-group { display: flex; gap: 8px; width: 100%; }
         
-        #kanban { display: flex; flex-direction: column; gap: 4px; }
+        /* 列表布局：取消固定高度，允许自适应 */
+        #kanban { display: flex; flex-direction: column; gap: 6px; }
         
         .card {
-            background: var(--card-bg); border-radius: 6px; padding: 6px 10px;
-            display: flex; align-items: center; justify-content: space-between;
-            box-shadow: 0 1px 1px rgba(0,0,0,0.05);
-            border-left: 4px solid #d1d1d6;
-            min-height: 36px;
+            background: var(--card-bg); border-radius: 8px; padding: 12px;
+            display: flex; align-items: flex-start; /* 顶部对齐 */
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            border-left: 6px solid #c7c7cc;
+            transition: all 0.2s;
         }
         
-        .card.status-pass { border-left-color: var(--pass); background-color: #f2fff5; }
-        .card.status-fail { border-left-color: var(--fail); background-color: #fff2f2; }
-        .card:active { background-color: #e5e5ea; }
+        /* 强化状态颜色 */
+        .card.status-pass { 
+            border-left-color: var(--pass-strong); 
+            background-color: var(--pass-bg); 
+        }
+        .card.status-fail { 
+            border-left-color: var(--fail-strong); 
+            background-color: var(--fail-bg); 
+        }
+        .card:active { filter: brightness(0.9); }
 
+        /* 左侧：场地标签 */
         .venue-tag {
             font-size: 11px; font-weight: 800; color: white;
-            padding: 2px 6px; border-radius: 3px; min-width: 48px; text-align: center;
-            margin-right: 10px; flex-shrink: 0;
+            padding: 3px 8px; border-radius: 4px; min-width: 50px; text-align: center;
+            margin-right: 12px; flex-shrink: 0; margin-top: 2px;
         }
         
+        /* 中间：工况名，支持换行 */
         .condition-name {
-            flex-grow: 1; font-size: 13px; font-weight: 500;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-            margin-right: 8px;
+            flex-grow: 1; font-size: 15px; font-weight: 600;
+            line-height: 1.4; word-break: break-all; /* 确保长单词或无空格字符换行 */
+            color: inherit;
         }
-        
-        .plan-count { font-size: 10px; color: var(--text-sec); flex-shrink: 0; }
 
-        button { padding: 8px 12px; border-radius: 6px; border: none; font-weight: 600; font-size: 13px; }
+        button { padding: 10px 14px; border-radius: 8px; border: none; font-weight: 700; font-size: 14px; }
         .btn-load { background: #007aff; color: white; flex: 1; }
         .btn-export { background: #ff9500; color: white; flex: 1.2; display: none; }
-        .btn-reset { background: #8e8e93; color: white; padding: 8px; margin-left: 5px; }
+        .btn-reset { background: #8e8e93; color: white; margin-left: 6px; }
         
         input[type="file"] { display: none; }
     </style>
@@ -56,7 +66,7 @@
 
     <div class="header">
         <div class="btn-group">
-            <button class="btn-load" onclick="document.getElementById('csvFile').click()">📂 加载/恢复</button>
+            <button class="btn-load" onclick="document.getElementById('csvFile').click()">📂 加载工况</button>
             <button id="exportBtn" class="btn-export" onclick="exportResults()">💾 导出结果</button>
             <button class="btn-reset" onclick="resetAll()">🗑️</button>
         </div>
@@ -67,14 +77,12 @@
 
 <script>
     let testData = [];
-    const STORAGE_KEY = 'VEHICLE_TEST_V7_DATA';
+    const STORAGE_KEY = 'VEHICLE_TEST_V8_DATA';
 
     function getNowFormat(isForFileName = false) {
         const d = new Date();
         const pad = (n) => n.toString().padStart(2, '0');
-        if (isForFileName) {
-            return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}`;
-        }
+        if (isForFileName) return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}`;
         return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
     }
 
@@ -121,7 +129,7 @@
     function renderKanban() {
         const container = document.getElementById('kanban');
         container.innerHTML = '';
-        const colors = ['#5856d6', '#007aff', '#34aadc', '#ff9500', '#af52de', '#ff2d55', '#4cd964'];
+        const colors = ['#5856d6', '#007aff', '#34aadc', '#ff9500', '#af52de', '#ff2d55', '#1d1d1f'];
         const venueColorMap = {};
 
         testData.forEach((item, index) => {
@@ -137,11 +145,10 @@
             card.innerHTML = `
                 <div class="venue-tag" style="background:${venueColorMap[item.venue]}">${item.venue}</div>
                 <div class="condition-name">${item.condition}</div>
-                <div class="plan-count">${item.count}次</div>
             `;
             card.onclick = () => {
                 const history = item.comments.length > 0 ? `[历史记录]:\n${item.comments.join('\n')}\n\n` : "";
-                const res = prompt(`${history}输入备注 (pass变绿):`, item.comments.length > 0 ? "" : "pass");
+                const res = prompt(`${history}输入备注 (输入 pass 变绿):`, item.comments.length > 0 ? "" : "pass");
                 if (res !== null && res.trim() !== "") {
                     item.comments.push(`[${getNowFormat()}] ${res.trim()}`);
                     localStorage.setItem(STORAGE_KEY, JSON.stringify(testData));
@@ -154,10 +161,8 @@
 
     function exportResults() {
         if (testData.length === 0) return;
-        
-        // 核心修改：询问车型
-        const carModel = prompt("请输入测试车型名称 (将用于文件名和表格列):", "某车型A");
-        if (carModel === null) return; // 用户取消导出
+        const carModel = prompt("请输入测试车型名称:", "");
+        if (carModel === null) return;
 
         const rows = testData.map(item => ({
             '测试车型': carModel,
@@ -170,8 +175,7 @@
         const csv = Papa.unparse(rows);
         const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
         const a = document.createElement("a");
-        const fileName = `${carModel.trim()}_${getNowFormat(true)}.csv`;
-        
+        const fileName = `${carModel ? carModel.trim() + '_' : ''}${getNowFormat(true)}.csv`;
         a.href = URL.createObjectURL(blob);
         a.download = fileName;
         document.body.appendChild(a);
@@ -180,7 +184,7 @@
     }
 
     function resetAll() {
-        if (confirm("确定重置吗？")) {
+        if (confirm("确定要重置所有进度吗？")) {
             localStorage.removeItem(STORAGE_KEY);
             location.reload();
         }
