@@ -3,55 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>动态测试助手 Pro v5</title>
+    <title>车辆测试极致版 v6</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
         :root { 
             --bg: #f2f2f7; --card-bg: #ffffff;
-            --pending: #ffffff; --pass: #34c759; --fail: #ff3b30;
+            --pass: #34c759; --fail: #ff3b30;
             --text-main: #1c1c1e; --text-sec: #8e8e93;
         }
-        body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 10px; color: var(--text-main); }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 8px; color: var(--text-main); }
         
-        /* 顶部紧凑控制栏 */
-        .header { background: white; padding: 10px; border-radius: 10px; margin-bottom: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-        .btn-group { display: flex; gap: 6px; }
+        /* 顶部控制栏 */
+        .header { background: white; padding: 8px 12px; border-radius: 10px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        .btn-group { display: flex; gap: 6px; width: 100%; }
         
-        /* 紧凑列表布局 */
-        #kanban { display: flex; flex-direction: column; gap: 6px; }
+        /* 极致紧凑列表 */
+        #kanban { display: flex; flex-direction: column; gap: 4px; }
         
-        /* 列表行样式 */
         .card {
-            background: var(--card-bg); border-radius: 8px; padding: 10px 12px;
-            display: flex; align-items: center; gap: 12px;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-            border-left: 5px solid #d1d1d6; /* 默认灰色边框 */
-            transition: background 0.2s;
+            background: var(--card-bg); border-radius: 6px; padding: 6px 10px;
+            display: flex; align-items: center; justify-content: space-between;
+            box-shadow: 0 1px 1px rgba(0,0,0,0.05);
+            border-left: 4px solid #d1d1d6;
+            min-height: 34px;
         }
         
-        /* 状态颜色：全卡片微调+边框强化 */
         .card.status-pass { border-left-color: var(--pass); background-color: #f2fff5; }
         .card.status-fail { border-left-color: var(--fail); background-color: #fff2f2; }
-        .card:active { background-color: #ebebeb; }
+        .card:active { background-color: #e5e5ea; }
 
-        /* 场地突出显示 */
+        /* 左侧：场地 */
         .venue-tag {
-            min-width: 60px; padding: 4px 6px; border-radius: 4px;
-            background: #5856d6; color: white; font-size: 12px;
-            font-weight: bold; text-align: center; flex-shrink: 0;
+            font-size: 11px; font-weight: 800; color: white;
+            padding: 2px 6px; border-radius: 3px; min-width: 45px; text-align: center;
+            margin-right: 10px; flex-shrink: 0;
         }
         
-        .info-area { flex-grow: 1; overflow: hidden; }
-        .info-area h4 { margin: 0; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .info-area .sub-info { font-size: 11px; color: var(--text-sec); margin-top: 2px; }
+        /* 中间：工况名 */
+        .condition-name {
+            flex-grow: 1; font-size: 13px; font-weight: 500;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            margin-right: 8px;
+        }
+        
+        /* 右侧：计划次数 */
+        .plan-count { font-size: 11px; color: var(--text-sec); flex-shrink: 0; }
 
-        /* 记录预览 */
-        .record-preview { font-size: 11px; color: #ff9500; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
-
-        button { flex: 1; padding: 10px; border-radius: 8px; border: none; font-weight: 600; font-size: 13px; }
-        .btn-load { background: #007aff; color: white; }
-        .btn-export { background: #ff9500; color: white; }
-        .btn-reset { background: #8e8e93; color: white; flex: 0.3; }
+        button { padding: 8px 12px; border-radius: 6px; border: none; font-weight: 600; font-size: 13px; }
+        .btn-load { background: #007aff; color: white; flex: 1; }
+        .btn-export { background: #ff9500; color: white; flex: 1; display: none; }
+        .btn-reset { background: #8e8e93; color: white; padding: 8px; margin-left: 5px; }
         
         input[type="file"] { display: none; }
     </style>
@@ -60,8 +61,8 @@
 
     <div class="header">
         <div class="btn-group">
-            <button class="btn-load" onclick="document.getElementById('csvFile').click()">📂 加载CSV</button>
-            <button id="exportBtn" class="btn-export" style="display:none" onclick="exportResults()">💾 导出</button>
+            <button class="btn-load" onclick="document.getElementById('csvFile').click()">📂 加载/恢复</button>
+            <button id="exportBtn" class="btn-export" onclick="exportResults()">💾 导出</button>
             <button class="btn-reset" onclick="resetAll()">🗑️</button>
         </div>
         <input type="file" id="csvFile" accept=".csv">
@@ -71,7 +72,7 @@
 
 <script>
     let testData = [];
-    const STORAGE_KEY = 'VEHICLE_TEST_V5_DATA';
+    const STORAGE_KEY = 'VEHICLE_TEST_V6_DATA';
 
     function getNowFormat() {
         const d = new Date();
@@ -84,11 +85,11 @@
         if (saved) {
             testData = JSON.parse(saved);
             renderKanban();
-            updateExportBtn();
+            updateUI();
         }
     };
 
-    function updateExportBtn() {
+    function updateUI() {
         document.getElementById('exportBtn').style.display = testData.length > 0 ? 'block' : 'none';
     }
 
@@ -104,9 +105,9 @@
                 transformHeader: h => h.trim().replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, ''),
                 complete: function(results) {
                     testData = results.data.map(item => {
-                        // 1. 自动解析已有的备注列 (如果有)
-                        const rawComments = item['测试记录时间内容'] || item['所有备注'] || item['测试记录'] || "";
-                        const commentsArray = rawComments ? rawComments.split(' | ').filter(c => c.trim() !== "") : [];
+                        // 寻找备注列的逻辑：兼容导出的表和原始表
+                        const commentCol = item['测试记录时间内容'] || item['所有备注'] || item['测试记录'] || "";
+                        const commentsArray = commentCol ? commentCol.split(' | ').filter(c => c.trim() !== "") : [];
                         
                         return {
                             venue: item['测试场地'] || item['场地'] || '未知',
@@ -117,7 +118,7 @@
                     });
                     localStorage.setItem(STORAGE_KEY, JSON.stringify(testData));
                     renderKanban();
-                    updateExportBtn();
+                    updateUI();
                 }
             });
         };
@@ -128,62 +129,54 @@
         const container = document.getElementById('kanban');
         container.innerHTML = '';
         
+        const colors = ['#5856d6', '#007aff', '#5ac8fa', '#ff9500', '#af52de', '#ff2d55'];
+        const venueColorMap = {};
+
         testData.forEach((item, index) => {
+            // 为场地分配固定颜色
+            if (!venueColorMap[item.venue]) {
+                venueColorMap[item.venue] = colors[Object.keys(venueColorMap).length % colors.length];
+            }
+
             const card = document.createElement('div');
-            
-            // 状态判断
             let statusClass = '';
             if (item.comments.length > 0) {
                 const hasPass = item.comments.some(c => c.toLowerCase().includes('pass'));
                 statusClass = hasPass ? 'status-pass' : 'status-fail';
             }
 
-            // 获取场地背景颜色逻辑（简单根据文字哈希生成颜色，保持同场地同色）
-            const colors = ['#5856d6', '#007aff', '#5ac8fa', '#ff9500', '#af52de'];
-            const colorIdx = item.venue.charCodeAt(0) % colors.length;
-
             card.className = `card ${statusClass}`;
             card.innerHTML = `
-                <div class="venue-tag" style="background:${colors[colorIdx]}">${item.venue}</div>
-                <div class="info-area">
-                    <h4>${item.condition}</h4>
-                    <div class="sub-info">计划: ${item.count}次 | 记录: ${item.comments.length}</div>
-                </div>
-                ${item.comments.length > 0 ? `<div class="record-preview">${item.comments[item.comments.length-1].split('] ')[1] || ''}</div>` : ''}
+                <div class="venue-tag" style="background:${venueColorMap[item.venue]}">${item.venue}</div>
+                <div class="condition-name">${item.condition}</div>
+                <div class="plan-count">${item.count}次</div>
             `;
 
-            card.onclick = () => handleFastAction(index);
+            card.onclick = () => {
+                const history = item.comments.length > 0 ? `历史记录:\n${item.comments.join('\n')}\n\n` : "";
+                const res = prompt(`${history}输入备注 (pass变绿):`, item.comments.length > 0 ? "" : "pass");
+                if (res !== null && res.trim() !== "") {
+                    item.comments.push(`[${getNowFormat()}] ${res.trim()}`);
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(testData));
+                    renderKanban();
+                }
+            };
             container.appendChild(card);
         });
     }
 
-    // 核心修改：点击直接弹出
-    function handleFastAction(index) {
-        const item = testData[index];
-        const history = item.comments.length > 0 ? `【历史记录】:\n${item.comments.join('\n')}\n\n` : "";
-        
-        const res = prompt(`${history}请输入本次记录 (输入 pass 变绿):`, item.comments.length > 0 ? "" : "pass");
-        
-        if (res !== null && res.trim() !== "") {
-            item.comments.push(`[${getNowFormat()}] ${res.trim()}`);
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(testData));
-            renderKanban();
-        }
-    }
-
     function exportResults() {
-        const exportRows = testData.map(item => ({
+        const rows = testData.map(item => ({
             '测试场地': item.venue,
             '测试工况': item.condition,
             '测试次数': item.count,
             '测试记录时间内容': item.comments.join(' | ')
         }));
-
-        const csv = Papa.unparse(exportRows);
+        const csv = Papa.unparse(rows);
         const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = `VTest_Export_${new Date().getTime()}.csv`;
+        a.download = `TestResult_${new Date().getTime()}.csv`;
         a.click();
     }
 
