@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>动态车辆测试看板 Pro</title>
+    <title>动态车辆测试看板 Pro v4</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
         :root { 
@@ -11,41 +11,38 @@
             --pending: #e9ecef; --testing: #cfe2ff; --pass: #d1e7dd; --fail: #f8d7da;
             --text-dark: #212529; --primary: #0d6efd; --success: #198754; --danger: #dc3545;
         }
-        body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 15px; color: var(--text-dark); }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 15px; color: var(--text-dark); -webkit-font-smoothing: antialiased; }
         
-        /* 顶部控制栏 */
         .header { background: white; padding: 15px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 15px; }
         .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
         
-        /* 看板布局 */
-        #kanban { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+        #kanban { display: grid; grid-template-columns: repeat(auto-fill, minmax(165px, 1fr)); gap: 12px; }
         
-        /* 卡片样式优化 */
         .card {
-            border-radius: 12px; padding: 15px; position: relative;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.1);
-            display: flex; flex-direction: column; min-height: 110px; transition: all 0.2s;
+            border-radius: 12px; padding: 14px; position: relative;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1.5px solid rgba(0,0,0,0.08);
+            display: flex; flex-direction: column; min-height: 120px; transition: transform 0.1s;
             background-color: var(--pending);
         }
+        .card:active { transform: scale(0.98); }
         .card.status-testing { background-color: var(--testing); border-color: var(--primary); animation: blink 2s infinite; }
-        .card.status-pass { background-color: var(--success); color: white; border-color: var(--success); }
-        .card.status-fail { background-color: var(--danger); color: white; border-color: var(--danger); }
+        .card.status-pass { background-color: var(--success); color: white; border-color: #146c43; }
+        .card.status-fail { background-color: var(--danger); color: white; border-color: #b02a37; }
         
-        .card.status-pass .tag, .card.status-fail .tag { background: rgba(255,255,255,0.2); color: white; }
-        .card.status-pass .count, .card.status-fail .count { color: rgba(255,255,255,0.8); }
+        .card.status-pass .tag, .card.status-fail .tag { background: rgba(255,255,255,0.25); color: white; }
+        .card.status-pass .count, .card.status-fail .count { color: rgba(255,255,255,0.85); }
 
-        .card h4 { margin: 10px 0 5px 0; font-size: 16px; font-weight: 600; }
-        .card .tag { font-size: 11px; background: #dee2e6; padding: 2px 8px; border-radius: 20px; align-self: flex-start; }
-        .card .count { font-size: 11px; color: #6c757d; margin-top: auto; }
-        .card .last-comment { font-size: 11px; margin-top: 5px; opacity: 0.9; font-style: italic; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .card h4 { margin: 10px 0 5px 0; font-size: 15px; font-weight: 700; line-height: 1.3; }
+        .card .tag { font-size: 10px; background: #dee2e6; padding: 2px 8px; border-radius: 4px; align-self: flex-start; text-transform: uppercase; }
+        .card .count { font-size: 11px; color: #6c757d; margin-top: auto; padding-top: 5px; }
+        .card .last-comment { font-size: 11px; margin-top: 5px; padding-top: 5px; border-top: 1px solid rgba(0,0,0,0.05); opacity: 0.9; font-style: italic; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-        @keyframes blink { 50% { opacity: 0.7; } }
+        @keyframes blink { 50% { border-color: transparent; } }
         
-        button { flex: 1; padding: 12px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
-        button:active { opacity: 0.7; }
+        button { flex: 1; padding: 12px 10px; border-radius: 10px; border: none; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px; }
         .btn-load { background: var(--primary); color: white; }
-        .btn-export { background: var(--success); color: white; }
-        .btn-reset { background: #6c757d; color: white; flex: 0.5; }
+        .btn-export { background: #fd7e14; color: white; } /* 橙色更醒目 */
+        .btn-reset { background: #6c757d; color: white; flex: 0.4; }
         
         input[type="file"] { display: none; }
     </style>
@@ -55,7 +52,7 @@
     <div class="header">
         <div class="btn-group">
             <button class="btn-load" onclick="document.getElementById('csvFile').click()">📂 加载/更新</button>
-            <button id="exportBtn" class="btn-export" style="display:none" onclick="exportResults()">💾 导出</button>
+            <button id="exportBtn" class="btn-export" style="display:none" onclick="exportResults()">💾 导出结果</button>
             <button class="btn-reset" onclick="resetAll()">🗑️ 重置</button>
         </div>
         <input type="file" id="csvFile" accept=".csv">
@@ -65,26 +62,35 @@
 
 <script>
     let testData = [];
-    const STORAGE_KEY = 'VEHICLE_TEST_APP_DATA';
+    const STORAGE_KEY = 'VEHICLE_TEST_V4_DATA';
 
-    // 页面初始化：尝试恢复数据
+    // 获取格式化后的绝对时间：YYYY-MM-DD HH:mm:ss
+    function getNowFormat() {
+        const d = new Date();
+        const pad = (n) => n.toString().padStart(2, '0');
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    }
+
     window.onload = () => {
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
             testData = JSON.parse(saved);
             renderKanban();
-            document.getElementById('exportBtn').style.display = 'block';
+            updateExportBtnVisibility();
         } else {
-            document.getElementById('kanban').innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:50px;color:#999">请加载测试工况 CSV 文件</div>';
+            document.getElementById('kanban').innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:50px;color:#999;font-size:14px;">请选择 CSV 工况表文件开始测试</div>';
         }
     };
 
-    // 保存数据到本地
     function saveData() {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(testData));
     }
 
-    // 处理文件加载
+    function updateExportBtnVisibility() {
+        const btn = document.getElementById('exportBtn');
+        btn.style.display = testData.length > 0 ? 'flex' : 'none';
+    }
+
     document.getElementById('csvFile').addEventListener('change', function(e) {
         const file = e.target.files[0];
         if (!file) return;
@@ -96,24 +102,22 @@
                 skipEmptyLines: true,
                 transformHeader: h => h.trim().replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, ''),
                 complete: function(results) {
-                    // 初始化数据
                     testData = results.data.map(item => ({
                         venue: item['测试场地'] || item['场地'] || '未知',
                         condition: item['测试工况'] || item['工况'] || '未知',
                         count: item['测试次数'] || item['次数'] || '0',
-                        comments: [], // 改为数组存储多条记录
-                        status: 'pending' // pending, testing, completed
+                        comments: [], 
+                        status: 'pending' 
                     }));
                     saveData();
                     renderKanban();
-                    document.getElementById('exportBtn').style.display = 'block';
+                    updateExportBtnVisibility();
                 }
             });
         };
         reader.readAsText(file, 'GBK');
     });
 
-    // 渲染
     function renderKanban() {
         const container = document.getElementById('kanban');
         container.innerHTML = '';
@@ -121,7 +125,6 @@
         testData.forEach((item, index) => {
             const card = document.createElement('div');
             
-            // 判定逻辑：只要有一条pass就是绿色，有评论但没pass是红色
             let displayStatus = item.status;
             if (item.comments.length > 0 && item.status !== 'testing') {
                 const hasPass = item.comments.some(c => c.toLowerCase().includes('pass'));
@@ -129,12 +132,17 @@
             }
 
             card.className = `card status-${displayStatus}`;
-            const lastMsg = item.comments.length > 0 ? item.comments[item.comments.length-1] : "";
+            // 提取最后一条记录用于卡片预览
+            let lastMsg = "";
+            if(item.comments.length > 0) {
+                const parts = item.comments[item.comments.length-1].split('] ');
+                lastMsg = parts.length > 1 ? parts[1] : parts[0];
+            }
 
             card.innerHTML = `
                 <div class="tag">${item.venue}</div>
                 <h4>${item.condition}</h4>
-                <div class="count">计划: ${item.count}次 | 记录: ${item.comments.length}条</div>
+                <div class="count">计划: ${item.count}次 | 记录: ${item.comments.length}</div>
                 ${lastMsg ? `<div class="last-comment">最新: ${lastMsg}</div>` : ''}
             `;
 
@@ -143,7 +151,6 @@
         });
     }
 
-    // 交互逻辑
     function handleAction(index) {
         const item = testData[index];
 
@@ -153,26 +160,23 @@
             renderKanban();
         } 
         else if (item.status === 'testing') {
-            const res = prompt("【录入结果】\n请输入 Comment (例如: pass 或 具体的异常描述):", "pass");
+            const res = prompt("【录入测试结果】\n请输入 Comment (输入 pass 变绿):", "pass");
             if (res !== null) {
                 if (res.trim() !== "") {
-                    const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                    item.comments.push(`[${time}] ${res.trim()}`);
+                    item.comments.push(`[${getNowFormat()}] ${res.trim()}`);
                     item.status = 'completed';
                 } else {
-                    item.status = 'pending'; // 空白则视为取消测试
+                    item.status = 'pending';
                 }
                 saveData();
                 renderKanban();
             }
         } 
         else {
-            // 已有记录的情况：显示历史并允许追加
             const history = item.comments.join('\n');
-            const res = prompt(`【测试历史记录】:\n${history}\n\n如需追加备注请在此输入，否则点取消:`, "");
+            const res = prompt(`【测试历史 (绝对时间)】:\n${history}\n\n如需追加记录请输入，否则点取消:`, "");
             if (res !== null && res.trim() !== "") {
-                const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                item.comments.push(`[${time}] ${res.trim()}`);
+                item.comments.push(`[${getNowFormat()}] ${res.trim()}`);
                 saveData();
                 renderKanban();
             }
@@ -180,24 +184,38 @@
     }
 
     function exportResults() {
+        if (testData.length === 0) return;
+
         const exportRows = testData.map(item => ({
             '测试场地': item.venue,
             '测试工况': item.condition,
             '测试次数': item.count,
-            '所有备注': item.comments.join(' | ')
+            '测试记录(时间+内容)': item.comments.join(' | ')
         }));
 
         const csv = Papa.unparse(exportRows);
         const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        
+        // 增强版 iOS 下载逻辑
         const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = `车辆测试汇总_${new Date().getMonth()+1}月${new Date().getDate()}日.csv`;
+        a.href = url;
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+        a.download = `VehicleTest_${timestamp}.csv`;
+        document.body.appendChild(a);
         a.click();
+        
+        // 延迟移除防止下载中断
+        setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }, 100);
     }
 
     function resetAll() {
-        if (confirm("确定要清空当前所有进度吗？此操作不可撤销。")) {
+        if (confirm("⚠️ 注意：这将永久删除手机本地存储的所有测试进度和 Comment。确认重置吗？")) {
             localStorage.removeItem(STORAGE_KEY);
+            testData = [];
             location.reload();
         }
     }
