@@ -2,284 +2,326 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>车辆测试专业版 v16</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>车辆测试专业版 v24</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
         :root { 
             --bg: #f2f2f7; --card-bg: #ffffff;
-            --pass-strong: #1a7f37; --pass-bg: #dcffe4;
-            --fail-strong: #cf222e; --fail-bg: #ffebe9;
-            --text-main: #1c1c1e; --text-sec: #6e6e73;
-            --accent: #007aff; --danger: #ff3b30;
+            --pass: #34c759; --fail: #ff3b30;
+            --accent: #007aff; --text: #1c1c1e; --sec: #8e8e93;
         }
-        body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding: 10px; color: var(--text-main); padding-bottom: 90px; }
-        
-        /* 顶部区域 */
-        .header { background: white; padding: 12px; border-radius: 12px; margin-bottom: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .model-area { margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
-        .model-area input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 8px; font-size: 14px; outline: none; background: #f9f9f9; }
+        * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; outline: none; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding: env(safe-area-inset-top) 10px 100px 10px; color: var(--text); }
+
+        /* 统计栏 */
+        .stats-bar { display: flex; gap: 6px; margin-bottom: 8px; position: sticky; top: 5px; z-index: 100; }
+        .stat-item { flex: 1; background: white; padding: 6px; border-radius: 10px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05); font-size: 11px; }
+        .stat-num { display: block; font-size: 16px; font-weight: 800; }
+
+        /* 工具栏 */
+        .toolbar { background: white; border-radius: 12px; padding: 12px; margin-bottom: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
+        .model-input { width: 100%; padding: 8px; border: none; background: #f9f9f9; border-radius: 8px; font-size: 18px; font-weight: 800; text-align: center; color: var(--accent); margin-bottom: 10px; border: 1px dashed #ddd; }
+        .search-box { width: 100%; padding: 10px; border: none; background: #f2f2f7; border-radius: 8px; font-size: 14px; margin-bottom: 8px; }
         .main-btns { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
-        .main-btns button { padding: 10px 4px; font-size: 12px; border-radius: 6px; border: none; font-weight: bold; color: white; cursor: pointer; }
+        .main-btns button { border: none; padding: 8px; border-radius: 6px; font-weight: 600; font-size: 12px; color: white; cursor: pointer; }
         .btn-import { background: #5856d6; } .btn-export { background: #ff9500; } .btn-new { background: #8e8e93; }
 
-        /* 列表区域 */
-        #kanban { display: flex; flex-direction: column; gap: 8px; }
-        .card { background: var(--card-bg); border-radius: 10px; padding: 12px; border-left: 6px solid #c7c7cc; box-shadow: 0 1px 3px rgba(0,0,0,0.08); position: relative; }
-        .card.status-pass { border-left-color: var(--pass-strong); background-color: var(--pass-bg); }
-        .card.status-fail { border-left-color: var(--fail-strong); background-color: var(--fail-bg); }
+        /* 卡片列表 */
+        #kanban { display: grid; gap: 6px; }
+        .card { background: var(--card-bg); border-radius: 10px; padding: 12px; border-left: 5px solid #d1d1d6; box-shadow: 0 1px 3px rgba(0,0,0,0.04); display: flex; align-items: center; }
+        .card.status-pass { border-left-color: var(--pass); }
+        .card.status-fail { border-left-color: var(--fail); }
+        .venue-tag { font-size: 10px; font-weight: 800; color: white; padding: 2px 6px; border-radius: 4px; margin-right: 8px; white-space: nowrap; }
+        .condition-name { font-size: 14px; font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; }
+
+        /* 操作详情 */
+        #actionSheet { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 2000; align-items: flex-end; }
+        .sheet-content { background: white; width: 100%; border-radius: 20px 20px 0 0; padding: 20px; padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
+        .history-list { max-height: 250px; overflow-y: auto; background: #f8f8f8; border-radius: 12px; padding: 10px; margin-bottom: 15px; border: 1px solid #eee; }
+        .hist-item { padding: 10px; background: white; border-radius: 8px; margin-bottom: 8px; border: 1px solid #eee; font-size: 13px; }
+        .hist-time { font-size: 10px; color: #999; margin-bottom: 4px; }
+
+        /* 语音动效 */
+        #speechOverlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 3000; flex-direction: column; align-items: center; justify-content: center; color: white; }
+        .wave-box { display: flex; align-items: center; gap: 5px; height: 60px; margin-bottom: 30px; }
+        .bar { width: 5px; background: var(--accent); border-radius: 3px; height: 10px; transition: height 0.1s ease; }
+        #speechText { font-size: 20px; font-weight: 600; padding: 0 40px; text-align: center; margin-bottom: 40px; min-height: 30px; }
+
+        .sheet-btn { width: 100%; padding: 15px; margin-bottom: 8px; border-radius: 12px; border: none; font-size: 16px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; }
         
-        .card-top { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 4px; }
-        .venue-tag { font-size: 10px; font-weight: 800; color: white; padding: 2px 6px; border-radius: 4px; min-width: 45px; text-align: center; margin-top: 2px; }
-        .condition-name { flex-grow: 1; font-size: 15px; font-weight: 700; line-height: 1.3; }
+        /* 弹窗 */
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2500; align-items: center; justify-content: center; padding: 20px; }
+        .modal-content { background: white; width: 100%; max-width: 400px; border-radius: 16px; padding: 20px; }
+        .modal-input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 15px; margin-bottom: 12px; }
 
-        /* 评论与折叠 */
-        .comments-container { font-size: 12px; margin-top: 6px; border-top: 1px solid rgba(0,0,0,0.05); padding-top: 6px; }
-        .comment-item { display: flex; flex-direction: column; margin-bottom: 4px; border-bottom: 1px dashed rgba(0,0,0,0.03); padding-bottom: 2px; }
-        .comment-time { font-size: 9px; color: #999; font-family: monospace; }
-        .comment-content { font-weight: 500; word-break: break-all; }
-        .fold-btn { color: var(--accent); font-size: 11px; font-weight: bold; padding: 4px 0; display: block; text-align: center; text-decoration: none; }
-
-        /* 操作面板 */
-        #actionSheet { display: none; position: fixed; bottom: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 2000; align-items: flex-end; }
-        .sheet-content { background: white; width: 100%; border-top-left-radius: 20px; border-top-right-radius: 20px; padding: 20px; box-sizing: border-box; }
-        .sheet-title { font-size: 13px; color: #888; text-align: center; margin-bottom: 15px; }
-        .sheet-btn { width: 100%; padding: 14px; margin-bottom: 8px; border-radius: 12px; border: none; font-size: 16px; font-weight: bold; cursor: pointer; }
-        .btn-voice { background: var(--accent); color: white; }
-        .btn-text { background: #f2f2f7; color: var(--text-main); }
-        .btn-edit { background: #fff9e6; color: #d97706; }
-        .btn-delete { background: #fff2f2; color: var(--danger); }
-        .btn-close { background: white; color: var(--text-sec); border: 1px solid #ddd; margin-top: 5px; }
-
-        /* 语音识别遮罩 */
-        #speechOverlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 3000; flex-direction: column; align-items: center; justify-content: center; color: white; }
-        .speech-anim { width: 40px; height: 40px; border: 3px solid var(--accent); border-radius: 50%; border-top-color: transparent; animation: spin 1s linear infinite; margin-bottom: 20px; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        .fab-area { position: fixed; bottom: 20px; left: 10px; right: 10px; display: flex; }
-        .btn-add { background: var(--accent); color: white; border-radius: 12px; padding: 15px; font-weight: bold; flex: 1; border: none; font-size: 16px; }
-        input[type="file"] { display: none; }
+        .fab { position: fixed; bottom: 25px; left: 15px; right: 15px; }
+        .btn-add-pro { width: 100%; background: #000; color: white; padding: 16px; border-radius: 14px; font-weight: 700; border: none; font-size: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
     </style>
 </head>
 <body>
 
-    <div id="actionSheet" onclick="closeSheet()">
-        <div class="sheet-content" onclick="event.stopPropagation()">
-            <div id="targetName" class="sheet-title">工况详情</div>
-            <button class="sheet-btn btn-voice" onclick="onVoiceClick()">🎤 语音输入评论</button>
-            <button class="sheet-btn btn-text" onclick="onTextClick()">⌨️ 文字输入评论</button>
-            <button class="sheet-btn btn-edit" onclick="onEditItem()">✏️ 修改工况描述</button>
-            <button class="sheet-btn btn-delete" onclick="onDeleteClick()">🗑️ 删除此条工况</button>
-            <button class="sheet-btn btn-close" onclick="closeSheet()">取消</button>
-        </div>
+    <div class="stats-bar">
+        <div class="stat-item"><span class="stat-num" id="stat-total">0</span>总条目</div>
+        <div class="stat-item" style="color:var(--pass)"><span class="stat-num" id="stat-pass">0</span>通过</div>
+        <div class="stat-item" style="color:var(--fail)"><span class="stat-num" id="stat-fail">0</span>异常</div>
     </div>
 
-    <div id="speechOverlay">
-        <div class="speech-anim"></div>
-        <div id="speechOutput" style="padding: 30px; text-align: center; font-size: 18px;">正在倾听...</div>
-        <button class="sheet-btn" style="width: 200px; background: #34c759; color: white;" onclick="stopSpeech()">完成并保存</button>
-    </div>
-
-    <div class="header">
-        <div class="model-area">
-            <input type="text" id="carModelInput" placeholder="请输入车型..." oninput="saveModel()">
-        </div>
+    <div class="toolbar">
+        <input type="text" id="carModelInput" class="model-input" placeholder="输入测试车型/版本..." oninput="saveModel()">
+        <input type="text" id="searchBar" class="search-box" placeholder="🔍 搜索工况..." oninput="render()">
         <div class="main-btns">
-            <button class="btn-import" onclick="document.getElementById('csvFile').click()">导入测试</button>
-            <button class="btn-export" onclick="exportResults()">导出测试</button>
-            <button class="btn-new" onclick="createNewTest()">新建空白</button>
+            <button class="btn-import" onclick="document.getElementById('csvFile').click()">导入</button>
+            <button class="btn-export" onclick="exportResults()">导出报告</button>
+            <button class="btn-new" onclick="createNewTest()">清空数据</button>
         </div>
-        <input type="file" id="csvFile" accept=".csv">
+        <input type="file" id="csvFile" accept=".csv" style="display:none">
     </div>
 
     <div id="kanban"></div>
 
-    <div class="fab-area">
-        <button class="btn-add" onclick="addNewItem()">➕ 添加新测试工况</button>
+    <div id="actionSheet" onclick="closeSheet()">
+        <div class="sheet-content" onclick="event.stopPropagation()">
+            <div id="sheetTitle" style="text-align:center; margin-bottom:15px; font-weight:800; color:var(--accent); font-size:18px;"></div>
+            <div id="historyArea" class="history-list"></div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+                <button class="sheet-btn" style="background:var(--accent); color:white;" onclick="startSpeech()">🎤 语音录入</button>
+                <button class="sheet-btn" style="background:#f2f2f7;" onclick="onTextClick()">⌨️ 文字录入</button>
+            </div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+                <button class="sheet-btn" style="background:#f2f2f7; font-size:14px;" onclick="onEditItem()">✏️ 修改描述</button>
+                <button class="sheet-btn" style="background:#fff2f2; color:var(--fail); font-size:14px;" onclick="onDeleteClick()">🗑️ 删除条目</button>
+            </div>
+            <button class="sheet-btn" style="background:white; border:1px solid #eee; color:#999;" onclick="closeSheet()">返回</button>
+        </div>
+    </div>
+
+    <div id="speechOverlay">
+        <div class="wave-box" id="waveBox">
+            <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
+        </div>
+        <div id="speechText">正在倾听...</div>
+        <button class="sheet-btn" style="width:200px; background:var(--pass); color:white;" onclick="stopSpeech()">说完了，保存</button>
+    </div>
+
+    <div id="addModal" class="modal">
+        <div class="modal-content">
+            <div style="font-weight:bold; text-align:center; margin-bottom:15px;">新建测试条目</div>
+            <input type="text" id="newVenue" class="modal-input" placeholder="测试场地 (如: 冰面)">
+            <input type="text" id="newCondition" class="modal-input" placeholder="工况描述 (如: ESP制动)">
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                <button class="modal-input" style="background:#eee; border:none;" onclick="closeModal()">取消</button>
+                <button class="modal-input" style="background:var(--accent); color:white; border:none; font-weight:bold;" onclick="confirmAdd()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="fab">
+        <button class="btn-add-pro" onclick="openAddModal()">➕ 添加测试条目</button>
     </div>
 
 <script>
     let testData = [];
-    let foldedState = {}; // 记录哪些卡片被展开了
     let currentIdx = -1;
-    const STORAGE_KEY = 'VTEST_V16_DATA';
-    const MODEL_KEY = 'VTEST_V16_MODEL';
-
+    const VENUE_COLORS = ['#5856d6', '#007aff', '#34aadc', '#ff9500', '#af52de', '#ff2d55', '#1a7f37'];
+    
+    // 语音识别逻辑
     let recognition;
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    let audioContext, analyser, dataArray;
+    if (window.webkitSpeechRecognition || window.SpeechRecognition) {
         const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
         recognition = new SpeechRec();
         recognition.lang = 'zh-CN'; recognition.continuous = true; recognition.interimResults = true;
         recognition.onresult = (e) => {
             let txt = "";
             for (let i = e.resultIndex; i < e.results.length; ++i) txt += e.results[i][0].transcript;
-            document.getElementById('speechOutput').innerText = txt || "正在倾听...";
+            document.getElementById('speechText').innerText = txt || "正在倾听...";
         };
     }
 
+    function fixText(t) { return t ? t.replace(/[Mm]-split/gi, "μ-split").replace(/[Mm]-low/gi, "μ-low") : ""; }
+
     window.onload = () => {
-        document.getElementById('carModelInput').value = localStorage.getItem(MODEL_KEY) || "";
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) { testData = JSON.parse(saved); render(); }
+        const saved = localStorage.getItem('V_DATA_V24');
+        if (saved) testData = JSON.parse(saved);
+        document.getElementById('carModelInput').value = localStorage.getItem('V_MODEL_V24') || "";
+        render();
     };
 
-    function saveModel() { localStorage.setItem(MODEL_KEY, document.getElementById('carModelInput').value); }
-    function openSheet(index) {
-        currentIdx = index;
-        document.getElementById('targetName').innerText = "工况: " + testData[index].condition;
-        document.getElementById('actionSheet').style.display = 'flex';
-    }
-    function closeSheet() { document.getElementById('actionSheet').style.display = 'none'; }
-
-    function onVoiceClick() {
-        closeSheet();
-        if (!recognition) return alert("环境不支持语音");
-        document.getElementById('speechOutput').innerText = "请开始说话...";
-        document.getElementById('speechOverlay').style.display = 'flex';
-        recognition.start();
-    }
-
-    function stopSpeech() {
-        const txt = document.getElementById('speechOutput').innerText;
-        recognition.stop();
-        document.getElementById('speechOverlay').style.display = 'none';
-        if (txt && txt !== "请开始说话...") {
-            let finalTxt = (txt.includes("通过") || txt.includes("完成")) ? "pass" : txt;
-            saveRecord(currentIdx, finalTxt);
-        }
-    }
-
-    function onTextClick() {
-        closeSheet();
-        const res = prompt("输入备注:", "pass");
-        if (res) saveRecord(currentIdx, res);
-    }
-
-    function onEditItem() {
-        closeSheet();
-        const oldV = testData[currentIdx].venue;
-        const oldC = testData[currentIdx].condition;
-        const newV = prompt("修改测试场地:", oldV);
-        if (newV === null) return;
-        const newC = prompt("修改工况描述:", oldC);
-        if (newC === null) return;
-        testData[currentIdx].venue = newV;
-        testData[currentIdx].condition = newC;
-        saveAndRender();
-    }
-
-    function onDeleteClick() {
-        if (confirm("删除此工况？")) {
-            testData.splice(currentIdx, 1);
-            saveAndRender();
-            closeSheet();
-        }
-    }
-
-    function toggleFold(i, event) {
-        event.stopPropagation();
-        foldedState[i] = !foldedState[i];
-        render();
-    }
-
-    function saveRecord(index, text) {
-        const time = new Date().toLocaleString();
-        testData[index].comments.push(`[${time}] ${text}`);
-        saveAndRender();
-    }
-
-    function saveAndRender() {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(testData));
-        render();
-    }
+    function saveModel() { localStorage.setItem('V_MODEL_V24', document.getElementById('carModelInput').value); }
 
     function render() {
         const container = document.getElementById('kanban');
+        const searchTerm = document.getElementById('searchBar').value.toLowerCase();
         container.innerHTML = '';
-        const venueColors = ['#5856d6', '#007aff', '#34aadc', '#ff9500', '#af52de', '#ff2d55'];
-        const venueMap = {};
+        const venueMap = {}; let vColorIdx = 0;
+        let pCount = 0, fCount = 0;
 
         testData.forEach((item, i) => {
-            if (!venueMap[item.venue]) venueMap[item.venue] = venueColors[Object.keys(venueMap).length % venueColors.length];
+            if (searchTerm && !item.venue.toLowerCase().includes(searchTerm) && !item.condition.toLowerCase().includes(searchTerm)) return;
+            if (!venueMap[item.venue]) { venueMap[item.venue] = VENUE_COLORS[vColorIdx % VENUE_COLORS.length]; vColorIdx++; }
+
             const card = document.createElement('div');
-            
-            // 状态判定：仅看最后一条
             let statusClass = '';
             if (item.comments.length > 0) {
-                statusClass = item.comments[item.comments.length - 1].toLowerCase().includes('pass') ? 'status-pass' : 'status-fail';
+                const isPass = item.comments[item.comments.length - 1].toLowerCase().includes('pass');
+                statusClass = isPass ? 'status-pass' : 'status-fail';
+                isPass ? pCount++ : fCount++;
             }
-            
             card.className = `card ${statusClass}`;
-            
-            // 评论处理
-            let commentsContent = '';
-            if (item.comments.length > 0) {
-                const isExpanded = foldedState[i];
-                // 如果未展开，只显示最后一条；如果展开，显示全部
-                const displayComments = isExpanded ? item.comments : [item.comments[item.comments.length - 1]];
-                
-                let listHtml = displayComments.map(c => {
-                    const parts = c.split('] ');
-                    return `<div class="comment-item"><span class="comment-time">${parts[0].replace('[','')}</span><span class="comment-content">${parts[1]||''}</span></div>`;
-                }).reverse().join(''); // 最新的显示在顶部
-
-                const foldLabel = isExpanded ? "收起历史记录" : `展开更多历史 (${item.comments.length}条)`;
-                const foldLink = item.comments.length > 1 ? `<a href="#" class="fold-btn" onclick="toggleFold(${i}, event)">${foldLabel}</a>` : '';
-                
-                commentsContent = `<div class="comments-container">${listHtml}${foldLink}</div>`;
-            }
-
+            card.onclick = () => openSheet(i);
             card.innerHTML = `
-                <div onclick="openSheet(${i})">
-                    <div class="card-top">
-                        <div class="venue-tag" style="background:${venueMap[item.venue]}">${item.venue}</div>
-                        <div class="condition-name">${item.condition}</div>
-                    </div>
-                </div>
-                ${commentsContent}
+                <span class="venue-tag" style="background:${venueMap[item.venue]}">${item.venue}</span>
+                <span class="condition-name">${item.condition}</span>
+                <span style="font-size:11px; color:#999; margin-left:5px;">${item.comments.length ? '('+item.comments.length+')' : ''}</span>
             `;
             container.appendChild(card);
         });
+        document.getElementById('stat-total').innerText = testData.length;
+        document.getElementById('stat-pass').innerText = pCount;
+        document.getElementById('stat-fail').innerText = fCount;
     }
 
-    document.getElementById('csvFile').addEventListener('change', function(e) {
+    function openSheet(i) {
+        currentIdx = i;
+        const item = testData[i];
+        document.getElementById('sheetTitle').innerText = item.condition;
+        const histArea = document.getElementById('historyArea');
+        histArea.innerHTML = item.comments.length ? item.comments.map((c, cIdx) => {
+            const p = c.split('] ');
+            return `<div class="hist-item" onclick="editComment(${cIdx})"><div class="hist-time">${p[0].replace('[','')}</div>${p[1]}</div>`;
+        }).reverse().join('') : '<div style="color:#ccc; text-align:center; padding:20px;">暂无历史记录</div>';
+        document.getElementById('actionSheet').style.display = 'flex';
+    }
+
+    function editComment(cIdx) {
+        const realIdx = (testData[currentIdx].comments.length - 1) - cIdx; // 修正反转后的索引
+        const oldFull = testData[currentIdx].comments[realIdx];
+        const oldText = oldFull.includes('] ') ? oldFull.split('] ')[1] : oldFull;
+        const newText = prompt("编辑该条记录 (清空则删除):", oldText);
+        
+        if (newText === null) return;
+        if (newText.trim() === "") {
+            testData[currentIdx].comments.splice(realIdx, 1);
+        } else {
+            const timePart = oldFull.includes('] ') ? oldFull.split('] ')[0] + '] ' : `[${new Date().toLocaleString()}] `;
+            testData[currentIdx].comments[realIdx] = timePart + newText;
+        }
+        saveAndRender();
+        openSheet(currentIdx);
+    }
+
+    // 语音动效逻辑
+    function initAudioVisualizer() {
+        navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioContext.createAnalyser();
+            const source = audioContext.createMediaStreamSource(stream);
+            source.connect(analyser);
+            analyser.fftSize = 32;
+            dataArray = new Uint8Array(analyser.frequencyBinCount);
+            function draw() {
+                if (!analyser) return;
+                requestAnimationFrame(draw);
+                analyser.getByteFrequencyData(dataArray);
+                const bars = document.querySelectorAll('.bar');
+                bars.forEach((bar, index) => {
+                    const h = (dataArray[index] / 255) * 50 + 8;
+                    bar.style.height = h + 'px';
+                });
+            }
+            draw();
+        }).catch(err => console.log("麦克风权限被拒绝"));
+    }
+
+    function startSpeech() {
+        if (!recognition) return alert("当前环境不支持语音识别");
+        document.getElementById('speechOverlay').style.display = 'flex';
+        document.getElementById('speechText').innerText = "请开始说话...";
+        recognition.start();
+        initAudioVisualizer();
+    }
+
+    function stopSpeech() {
+        const txt = document.getElementById('speechText').innerText;
+        recognition.stop();
+        if (audioContext) audioContext.close();
+        document.getElementById('speechOverlay').style.display = 'none';
+        if (txt && txt !== "请开始说话...") {
+            const final = (txt.includes("通过") || txt.includes("完成")) ? "pass" : txt;
+            testData[currentIdx].comments.push(`[${new Date().toLocaleString()}] ${final}`);
+            saveAndRender();
+            openSheet(currentIdx);
+        }
+    }
+
+    // 恢复强兼容导入逻辑
+    document.getElementById('csvFile').onchange = (e) => {
         const file = e.target.files[0];
         if (!file) return;
         const reader = new FileReader();
-        reader.onload = function(evt) {
+        reader.onload = (evt) => {
             Papa.parse(evt.target.result, {
                 header: true, skipEmptyLines: true,
-                transformHeader: h => h.trim().replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, ''),
-                complete: function(r) {
-                    const newData = r.data.map(item => ({
-                        venue: item['测试场地'] || item['场地'] || '未知',
-                        condition: item['测试工况'] || item['工况'] || '未知',
-                        comments: (item['测试记录时间内容'] || "").split(' | ').filter(c => c.trim() !== "")
-                    }));
+                complete: (r) => {
+                    const newData = r.data.map(d => {
+                        // 兼容各种时期的表头命名
+                        const venue = d['测试场地'] || d['场地'] || d['Venue'] || '未知场地';
+                        const condition = d['测试工况'] || d['工况'] || d['Condition'] || '未知工况';
+                        const rawComments = d['测试记录时间内容'] || d['记录'] || d['Comments'] || "";
+                        
+                        return {
+                            venue: fixText(venue),
+                            condition: fixText(condition),
+                            comments: rawComments.split(' | ').filter(c => c.trim())
+                        };
+                    });
                     testData = [...testData, ...newData];
                     saveAndRender();
+                    alert(`成功导入 ${newData.length} 条记录`);
                 }
             });
         };
+        // 尝试 GBK 编码以防止中文乱码（Excel 默认格式）
         reader.readAsText(file, 'GBK');
-    });
+    };
 
-    function createNewTest() { if (confirm("清空？")) { testData = []; saveAndRender(); } }
-
-    function addNewItem() {
-        const v = prompt("场地:", "新场地");
-        const c = prompt("工况:", "");
-        if (v && c) { testData.push({ venue: v, condition: c, comments: [] }); saveAndRender(); }
+    function onTextClick() {
+        const res = prompt("录入测试结果 (输入 pass 标记通过):", "pass");
+        if (res) { testData[currentIdx].comments.push(`[${new Date().toLocaleString()}] ${res}`); saveAndRender(); openSheet(currentIdx); }
     }
 
+    function onEditItem() {
+        const v = prompt("修改场地:", testData[currentIdx].venue);
+        const c = prompt("修改工况:", testData[currentIdx].condition);
+        if (v && c) { testData[currentIdx].venue = fixText(v); testData[currentIdx].condition = fixText(c); saveAndRender(); openSheet(currentIdx); }
+    }
+
+    function openAddModal() { document.getElementById('newVenue').value = localStorage.getItem('LAST_V') || ""; document.getElementById('addModal').style.display = 'flex'; }
+    function closeModal() { document.getElementById('addModal').style.display = 'none'; }
+    function confirmAdd() {
+        const v = document.getElementById('newVenue').value.trim();
+        const c = document.getElementById('newCondition').value.trim();
+        if (v && c) { localStorage.setItem('LAST_V', v); testData.push({ venue: fixText(v), condition: fixText(c), comments: [] }); saveAndRender(); closeModal(); }
+    }
+
+    function saveAndRender() { localStorage.setItem('V_DATA_V24', JSON.stringify(testData)); render(); }
+    function closeSheet() { document.getElementById('actionSheet').style.display = 'none'; }
+    function onDeleteClick() { if (confirm("删除条目？")) { testData.splice(currentIdx, 1); saveAndRender(); closeSheet(); } }
+    function createNewTest() { if (confirm("确定清空全部数据？")) { testData = []; saveAndRender(); } }
+
     function exportResults() {
-        const car = document.getElementById('carModelInput').value || "未命名车型";
-        const rows = testData.map(item => ({ '测试车型': car, '测试场地': item.venue, '测试工况': item.condition, '测试记录时间内容': item.comments.join(' | ') }));
-        const csv = Papa.unparse(rows);
+        const car = document.getElementById('carModelInput').value || "测试项目";
+        const csv = Papa.unparse(testData.map(d => ({ 
+            '测试车型': car, 
+            '测试场地': d.venue, 
+            '测试工况': d.condition, 
+            '测试记录时间内容': d.comments.join(' | ') 
+        })));
         const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
         const a = document.createElement("a");
         a.href = URL.createObjectURL(blob);
-        a.download = `${car}_Export.csv`;
+        a.download = `${car}_报告.csv`;
         a.click();
     }
 </script>
