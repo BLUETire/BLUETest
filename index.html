@@ -3,80 +3,87 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>车辆测试专业版 v26</title>
+    <title>车辆测试专业版 v27</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
         :root { 
             --bg: #f2f2f7; --card-bg: #ffffff;
-            --pass: #34c759; --fail: #ff3b30;
+            --pass-bg: #d1f7d6; --pass-text: #0e5a1f;
+            --fail-bg: #ffd1d1; --fail-text: #8b0000;
             --accent: #007aff; --text: #1c1c1e; --sec: #8e8e93;
         }
         * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; outline: none; }
         body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding: env(safe-area-inset-top) 10px 100px 10px; color: var(--text); }
 
-        /* 顶部统计 */
+        /* 顶部统计筛选栏 */
         .stats-bar { display: flex; gap: 6px; margin-bottom: 8px; position: sticky; top: 5px; z-index: 100; }
-        .stat-item { flex: 1; background: white; padding: 6px; border-radius: 10px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.05); font-size: 11px; }
+        .stat-item { flex: 1; background: white; padding: 6px; border-radius: 10px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1); cursor: pointer; border: 2px solid transparent; transition: all 0.2s; }
+        .stat-item:active { transform: scale(0.95); opacity: 0.8; }
+        .stat-item.active { border-color: var(--accent); background: #eef6ff; }
         .stat-num { display: block; font-size: 16px; font-weight: 800; }
+        .stat-label { font-size: 10px; color: var(--sec); font-weight: 600; }
 
         /* 工具栏 */
         .toolbar { background: white; border-radius: 12px; padding: 12px; margin-bottom: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
-        .model-input { width: 100%; padding: 8px; border: 1px dashed #ddd; background: #f9f9f9; border-radius: 8px; font-size: 18px; font-weight: 800; text-align: center; color: var(--accent); margin-bottom: 10px; }
+        .model-input { width: 100%; padding: 8px; border: 1px dashed #ccc; background: #f9f9f9; border-radius: 8px; font-size: 16px; font-weight: 800; text-align: center; color: var(--accent); margin-bottom: 10px; }
         .search-box { width: 100%; padding: 10px; border: none; background: #f2f2f7; border-radius: 8px; font-size: 14px; margin-bottom: 8px; }
         .main-btns { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
-        .main-btns button { border: none; padding: 8px; border-radius: 6px; font-weight: 600; font-size: 12px; color: white; cursor: pointer; }
-        .btn-import { background: #5856d6; } .btn-export { background: #ff9500; } .btn-new { background: #8e8e93; }
+        .main-btns button { border: none; padding: 8px; border-radius: 6px; font-weight: 600; font-size: 11px; color: white; }
 
-        /* 列表卡片 */
+        /* 全色块卡片列表 */
         #kanban { display: grid; gap: 6px; }
-        .card { background: var(--card-bg); border-radius: 10px; padding: 12px; border-left: 5px solid #d1d1d6; box-shadow: 0 1px 3px rgba(0,0,0,0.04); display: flex; align-items: center; cursor: pointer; }
-        .card.status-pass { border-left-color: var(--pass); }
-        .card.status-fail { border-left-color: var(--fail); }
+        .card { background: var(--card-bg); border-radius: 10px; padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; align-items: center; cursor: pointer; border: 1px solid #eee; }
+        .card.status-pass { background: var(--pass-bg); border-color: #b7e8bc; color: var(--pass-text); }
+        .card.status-fail { background: var(--fail-bg); border-color: #f5b7b7; color: var(--fail-text); }
         .venue-tag { font-size: 10px; font-weight: 800; color: white; padding: 2px 6px; border-radius: 4px; margin-right: 8px; white-space: nowrap; }
-        .condition-name { font-size: 14px; font-weight: 600; flex: 1; overflow: hidden; text-overflow: ellipsis; }
+        .card.status-pass .venue-tag { background: rgba(14, 90, 31, 0.6); }
+        .card.status-fail .venue-tag { background: rgba(139, 0, 0, 0.6); }
+        .condition-name { font-size: 14px; font-weight: 700; flex: 1; }
 
-        /* 详情面板 */
+        /* 详情与紧凑评论 */
         #actionSheet { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 2000; align-items: flex-end; }
-        .sheet-content { background: white; width: 100%; border-radius: 20px 20px 0 0; padding: 20px; padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
-        .history-list { max-height: 300px; overflow-y: auto; background: #f8f8f8; border-radius: 12px; padding: 10px; margin-bottom: 15px; border: 1px solid #eee; }
-        .hist-item-wrapper { position: relative; background: white; border-radius: 8px; margin-bottom: 8px; border: 1px solid #eee; padding: 10px; }
-        .hist-time { font-size: 10px; color: #999; margin-bottom: 4px; display: block; }
-        .hist-content { font-size: 14px; width: 90%; word-break: break-all; }
-        .del-comment-btn { position: absolute; top: 10px; right: 10px; color: #ff3b30; opacity: 0.3; font-size: 20px; padding: 5px; }
+        .sheet-content { background: white; width: 100%; border-radius: 20px 20px 0 0; padding: 16px; padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
+        .history-list { max-height: 350px; overflow-y: auto; background: #f2f2f7; border-radius: 10px; padding: 6px; margin-bottom: 12px; }
+        
+        .hist-item-wrapper { position: relative; background: white; border-radius: 6px; margin-bottom: 4px; border: 1px solid #e5e5e5; padding: 6px 10px; }
+        .hist-time { font-size: 9px; color: #999; margin-bottom: 2px; }
+        .hist-content { font-size: 13px; line-height: 1.4; width: 92%; }
+        .del-comment-btn { position: absolute; top: 50%; right: 4px; transform: translateY(-50%); color: #ff3b30; opacity: 0.2; font-size: 18px; width: 24px; height: 24px; text-align: center; }
 
-        /* 统一弹窗样式 */
+        /* 弹窗与语音 */
         .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2500; align-items: center; justify-content: center; padding: 20px; }
-        .modal-content { background: white; width: 100%; max-width: 400px; border-radius: 16px; padding: 24px; box-shadow: 0 15px 35px rgba(0,0,0,0.2); }
-        .modal-title { font-weight: 800; text-align: center; margin-bottom: 20px; font-size: 18px; color: #333; }
-        .modal-input { width: 100%; padding: 14px; border: 1px solid #e5e5e5; border-radius: 12px; font-size: 16px; margin-bottom: 15px; background: #f9f9f9; }
-        .modal-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .btn-m { padding: 14px; border-radius: 12px; border: none; font-size: 16px; font-weight: 700; cursor: pointer; }
+        .modal-content { background: white; width: 100%; max-width: 400px; border-radius: 16px; padding: 20px; }
+        .modal-input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 15px; margin-bottom: 12px; }
+        #speechOverlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 3000; flex-direction: column; align-items: center; justify-content: center; color: white; }
+        .wave-box { display: flex; align-items: center; gap: 4px; height: 40px; margin-bottom: 20px; }
+        .bar { width: 4px; background: var(--accent); border-radius: 2px; height: 5px; transition: height 0.1s ease; }
 
-        /* 语音动效 */
-        #speechOverlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 3000; flex-direction: column; align-items: center; justify-content: center; color: white; }
-        .wave-box { display: flex; align-items: center; gap: 5px; height: 60px; margin-bottom: 30px; }
-        .bar { width: 5px; background: var(--accent); border-radius: 3px; height: 10px; transition: height 0.1s ease; }
-
-        .sheet-btn { width: 100%; padding: 15px; margin-bottom: 8px; border-radius: 12px; border: none; font-size: 16px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .fab { position: fixed; bottom: 25px; left: 15px; right: 15px; }
-        .btn-add-pro { width: 100%; background: #000; color: white; padding: 16px; border-radius: 14px; font-weight: 700; border: none; font-size: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+        .sheet-btn { width: 100%; padding: 14px; margin-bottom: 8px; border-radius: 10px; border: none; font-size: 15px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 6px; }
+        .fab { position: fixed; bottom: 20px; left: 15px; right: 15px; }
+        .btn-add-pro { width: 100%; background: #000; color: white; padding: 16px; border-radius: 14px; font-weight: 700; border: none; font-size: 16px; }
     </style>
 </head>
 <body>
 
     <div class="stats-bar">
-        <div class="stat-item"><span class="stat-num" id="stat-total">0</span>总条目</div>
-        <div class="stat-item" style="color:var(--pass)"><span class="stat-num" id="stat-pass">0</span>通过</div>
-        <div class="stat-item" style="color:var(--fail)"><span class="stat-num" id="stat-fail">0</span>异常</div>
+        <div class="stat-item active" id="filter-all" onclick="setFilter('all')">
+            <span class="stat-num" id="stat-total">0</span><span class="stat-label">总条目</span>
+        </div>
+        <div class="stat-item" id="filter-pass" onclick="setFilter('pass')">
+            <span class="stat-num" id="stat-pass" style="color:var(--pass-text)">0</span><span class="stat-label">通过</span>
+        </div>
+        <div class="stat-item" id="filter-fail" onclick="setFilter('fail')">
+            <span class="stat-num" id="stat-fail" style="color:var(--fail-text)">0</span><span class="stat-label">异常</span>
+        </div>
     </div>
 
     <div class="toolbar">
         <input type="text" id="carModelInput" class="model-input" placeholder="输入测试车型..." oninput="saveModel()">
-        <input type="text" id="searchBar" class="search-box" placeholder="🔍 快速搜索工况..." oninput="render()">
+        <input type="text" id="searchBar" class="search-box" placeholder="🔍 搜索工况名称..." oninput="render()">
         <div class="main-btns">
-            <button class="btn-import" onclick="document.getElementById('csvFile').click()">导入</button>
-            <button class="btn-export" onclick="exportResults()">导出报告</button>
-            <button class="btn-new" onclick="createNewTest()">清空数据</button>
+            <button class="btn-import" style="background:#5856d6" onclick="document.getElementById('csvFile').click()">导入</button>
+            <button class="btn-export" style="background:#ff9500" onclick="exportResults()">导出</button>
+            <button class="btn-new" style="background:#8e8e93" onclick="createNewTest()">清空</button>
         </div>
         <input type="file" id="csvFile" accept=".csv" style="display:none">
     </div>
@@ -85,28 +92,28 @@
 
     <div id="actionSheet" onclick="closeSheet()">
         <div class="sheet-content" onclick="event.stopPropagation()">
-            <div id="sheetTitle" style="text-align:center; margin-bottom:15px; font-weight:800; color:var(--accent); font-size:18px;"></div>
+            <div id="sheetTitle" style="text-align:center; margin-bottom:12px; font-weight:800; color:var(--accent); font-size:16px;"></div>
             <div id="historyArea" class="history-list"></div>
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
-                <button class="sheet-btn" style="background:var(--accent); color:white;" onclick="startSpeech()">🎤 语音录入</button>
-                <button class="sheet-btn" style="background:#f2f2f7;" onclick="addManualRecord()">⌨️ 文字录入</button>
+                <button class="sheet-btn" style="background:var(--accent); color:white;" onclick="startSpeech()">🎤 语音</button>
+                <button class="sheet-btn" style="background:#f2f2f7;" onclick="addManualRecord()">⌨️ 文字</button>
             </div>
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
-                <button class="sheet-btn" style="background:#f2f2f7; font-size:14px;" onclick="openItemModal(true)">✏️ 修改工况</button>
-                <button class="sheet-btn" style="background:#fff2f2; color:var(--fail); font-size:14px;" onclick="onDeleteClick()">🗑️ 删除条目</button>
+                <button class="sheet-btn" style="background:#f2f2f7; font-size:13px;" onclick="openItemModal(true)">✏️ 修改工况</button>
+                <button class="sheet-btn" style="background:#fff2f2; color:var(--fail-text); font-size:13px;" onclick="onDeleteClick()">🗑️ 删除工况</button>
             </div>
-            <button class="sheet-btn" style="background:white; border:1px solid #eee; color:#999;" onclick="closeSheet()">返回</button>
+            <button class="sheet-btn" style="background:white; border:1px solid #eee; color:#999;" onclick="closeSheet()">返回列表</button>
         </div>
     </div>
 
     <div id="uniModal" class="modal">
         <div class="modal-content">
-            <div id="uniModalTitle" class="modal-title">新建测试工况</div>
-            <input type="text" id="uniModalVenue" class="modal-input" placeholder="测试场地 (例如：高附路)">
-            <input type="text" id="uniModalCondition" class="modal-input" placeholder="工况描述 (例如：60-0制动)">
-            <div class="modal-btns">
-                <button class="btn-m" style="background:#eee;" onclick="closeModal()">取消</button>
-                <button class="btn-m" style="background:var(--accent); color:white;" onclick="handleModalConfirm()">保存</button>
+            <div id="uniModalTitle" style="font-weight:800; text-align:center; margin-bottom:15px;">新建测试工况</div>
+            <input type="text" id="uniModalVenue" class="modal-input" placeholder="测试场地">
+            <input type="text" id="uniModalCondition" class="modal-input" placeholder="工况描述">
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                <button class="modal-input" style="background:#eee; border:none;" onclick="closeModal()">取消</button>
+                <button class="modal-input" style="background:var(--accent); color:white; border:none; font-weight:bold;" onclick="handleModalConfirm()">保存</button>
             </div>
         </div>
     </div>
@@ -115,8 +122,8 @@
         <div class="wave-box" id="waveBox">
             <div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div>
         </div>
-        <div id="speechText">请说话...</div>
-        <button class="sheet-btn" style="width:200px; background:var(--pass); color:white;" onclick="stopSpeech()">完成录入</button>
+        <div id="speechText" style="margin-bottom:30px; font-size:18px;">正在听...</div>
+        <button class="sheet-btn" style="width:160px; background:var(--pass-bg); color:var(--pass-text);" onclick="stopSpeech()">完成保存</button>
     </div>
 
     <div class="fab">
@@ -127,6 +134,7 @@
     let testData = [];
     let currentIdx = -1;
     let modalIsEditMode = false;
+    let currentFilter = 'all'; // all, pass, fail
     const VENUE_COLORS = ['#5856d6', '#007aff', '#34aadc', '#ff9500', '#af52de', '#ff2d55', '#1a7f37'];
     
     // 语音API
@@ -146,13 +154,21 @@
     function fixText(t) { return t ? t.replace(/[Mm]-split/gi, "μ-split").replace(/[Mm]-low/gi, "μ-low") : ""; }
 
     window.onload = () => {
-        const saved = localStorage.getItem('V_DATA_V26');
+        const saved = localStorage.getItem('V_DATA_V27');
         if (saved) testData = JSON.parse(saved);
-        document.getElementById('carModelInput').value = localStorage.getItem('V_MODEL_V26') || "";
+        document.getElementById('carModelInput').value = localStorage.getItem('V_MODEL_V27') || "";
         render();
     };
 
-    function saveModel() { localStorage.setItem('V_MODEL_V26', document.getElementById('carModelInput').value); }
+    function saveModel() { localStorage.setItem('V_MODEL_V27', document.getElementById('carModelInput').value); }
+
+    // 筛选逻辑
+    function setFilter(type) {
+        currentFilter = type;
+        document.querySelectorAll('.stat-item').forEach(el => el.classList.remove('active'));
+        document.getElementById('filter-' + type).classList.add('active');
+        render();
+    }
 
     function render() {
         const container = document.getElementById('kanban');
@@ -162,20 +178,27 @@
         let pCount = 0, fCount = 0;
 
         testData.forEach((item, i) => {
+            const lastComment = item.comments && item.comments.length > 0 ? item.comments[item.comments.length-1].toLowerCase() : "";
+            const isPass = lastComment.includes('pass');
+            const hasRecord = lastComment !== "";
+            
+            if (hasRecord) { isPass ? pCount++ : fCount++; }
+
+            // 应用筛选规则
+            if (currentFilter === 'pass' && !isPass) return;
+            if (currentFilter === 'fail' && (isPass || !hasRecord)) return;
             if (searchTerm && !item.venue.toLowerCase().includes(searchTerm) && !item.condition.toLowerCase().includes(searchTerm)) return;
+
             if (!venueMap[item.venue]) { venueMap[item.venue] = VENUE_COLORS[vColorIdx % VENUE_COLORS.length]; vColorIdx++; }
 
-            const lastComment = item.comments && item.comments.length > 0 ? item.comments[item.comments.length-1].toLowerCase() : "";
-            const statusClass = lastComment.includes('pass') ? 'status-pass' : (lastComment ? 'status-fail' : '');
-            if(lastComment) { lastComment.includes('pass') ? pCount++ : fCount++; }
-
             const card = document.createElement('div');
+            const statusClass = hasRecord ? (isPass ? 'status-pass' : 'status-fail') : '';
             card.className = `card ${statusClass}`;
             card.onclick = () => openSheet(i);
             card.innerHTML = `
                 <span class="venue-tag" style="background:${venueMap[item.venue]}">${item.venue}</span>
                 <span class="condition-name">${item.condition}</span>
-                <span style="font-size:11px; color:#999; margin-left:5px;">${item.comments?.length ? '('+item.comments.length+')' : ''}</span>
+                <span style="font-size:10px; opacity:0.6; margin-left:4px;">${item.comments?.length || 0}</span>
             `;
             container.appendChild(card);
         });
@@ -184,22 +207,16 @@
         document.getElementById('stat-fail').innerText = fCount;
     }
 
-    // 弹窗统一控制器
     function openItemModal(isEdit) {
         modalIsEditMode = isEdit;
-        const titleEl = document.getElementById('uniModalTitle');
-        const venueEl = document.getElementById('uniModalVenue');
-        const condEl = document.getElementById('uniModalCondition');
-
         if (isEdit) {
-            const item = testData[currentIdx];
-            titleEl.innerText = "修改工况信息";
-            venueEl.value = item.venue;
-            condEl.value = item.condition;
+            document.getElementById('uniModalTitle').innerText = "修改工况信息";
+            document.getElementById('uniModalVenue').value = testData[currentIdx].venue;
+            document.getElementById('uniModalCondition').value = testData[currentIdx].condition;
         } else {
-            titleEl.innerText = "新建测试工况";
-            venueEl.value = localStorage.getItem('LAST_V') || "";
-            condEl.value = "";
+            document.getElementById('uniModalTitle').innerText = "新建测试工况";
+            document.getElementById('uniModalVenue').value = localStorage.getItem('LAST_V') || "";
+            document.getElementById('uniModalCondition').value = "";
         }
         document.getElementById('uniModal').style.display = 'flex';
     }
@@ -208,22 +225,18 @@
         const v = fixText(document.getElementById('uniModalVenue').value.trim());
         const c = fixText(document.getElementById('uniModalCondition').value.trim());
         if (!v || !c) return;
-
         if (modalIsEditMode) {
-            testData[currentIdx].venue = v;
-            testData[currentIdx].condition = c;
+            testData[currentIdx].venue = v; testData[currentIdx].condition = c;
             document.getElementById('sheetTitle').innerText = c;
         } else {
             localStorage.setItem('LAST_V', v);
             testData.push({ venue: v, condition: c, comments: [] });
         }
-        saveAndRender();
-        closeModal();
+        saveAndRender(); closeModal();
     }
 
     function closeModal() { document.getElementById('uniModal').style.display = 'none'; }
 
-    // 详情逻辑
     function openSheet(i) {
         currentIdx = i;
         document.getElementById('sheetTitle').innerText = testData[i].condition;
@@ -236,89 +249,64 @@
         const comments = testData[currentIdx].comments || [];
         histArea.innerHTML = comments.length ? comments.map((c, cIdx) => {
             const parts = c.split('] ');
-            const time = parts[0] ? parts[0].replace('[','') : '记录';
+            const time = parts[0] ? parts[0].replace('[','') : 'Record';
             const content = parts[1] || c;
             return `
                 <div class="hist-item-wrapper">
-                    <span class="hist-time">${time}</span>
+                    <div class="hist-time">${time}</div>
                     <div class="hist-content" contenteditable="true" onblur="updateComment(${cIdx}, this)">${content}</div>
                     <div class="del-comment-btn" onclick="deleteComment(${cIdx})">×</div>
                 </div>
             `;
-        }).reverse().join('') : '<div style="color:#ccc; text-align:center; padding:20px;">暂无记录</div>';
+        }).reverse().join('') : '<div style="color:#ccc; text-align:center; padding:20px; font-size:13px;">无历史记录</div>';
     }
 
     function updateComment(idx, el) {
-        const newTxt = el.innerText.trim();
-        if (!newTxt) return;
+        const txt = el.innerText.trim(); if (!txt) return;
         const oldFull = testData[currentIdx].comments[idx];
         const timePart = oldFull.includes('] ') ? oldFull.split('] ')[0] + '] ' : '';
-        testData[currentIdx].comments[idx] = timePart + newTxt;
+        testData[currentIdx].comments[idx] = timePart + txt;
         saveAndRender();
     }
 
     function deleteComment(idx) {
         testData[currentIdx].comments.splice(idx, 1);
-        saveAndRender();
-        refreshHistoryList();
+        saveAndRender(); refreshHistoryList();
     }
 
-    // 导出文件名加时间
     function exportResults() {
         const car = document.getElementById('carModelInput').value || "Project";
-        
-        const now = new Date();
-        const Y = now.getFullYear();
-        const M = String(now.getMonth() + 1).padStart(2, '0');
-        const D = String(now.getDate()).padStart(2, '0');
-        const hh = String(now.getHours()).padStart(2, '0');
-        const mm = String(now.getMinutes()).padStart(2, '0');
-        const ss = String(now.getSeconds()).padStart(2, '0');
-        const timestamp = `${Y}${M}${D}_${hh}${mm}${ss}`;
-
-        const csv = Papa.unparse(testData.map(d => ({ 
-            '测试车型': car, 
-            '测试场地': d.venue, 
-            '测试工况': d.condition, 
-            '记录详情': d.comments.join(' | ') 
-        })));
-        
+        const ts = new Date().toISOString().replace(/[:T]/g, '').slice(0, 14);
+        const csv = Papa.unparse(testData.map(d => ({ '车型': car, '场地': d.venue, '工况': d.condition, '详情': d.comments.join(' | ') })));
         const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
-        const a = document.createElement("a");
-        a.href = URL.createObjectURL(blob);
-        a.download = `${car}_测试报告_${timestamp}.csv`;
-        a.click();
+        const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
+        a.download = `${car}_报告_${ts}.csv`; a.click();
     }
 
-    // 语音与录入
     function addManualRecord() {
-        const res = prompt("录入结果 (pass/异常内容):", "pass");
+        const res = prompt("录入结果:", "pass");
         if (res) {
             if(!testData[currentIdx].comments) testData[currentIdx].comments = [];
             testData[currentIdx].comments.push(`[${new Date().toLocaleString()}] ${res}`);
-            saveAndRender();
-            refreshHistoryList();
+            saveAndRender(); refreshHistoryList();
         }
     }
 
     function startSpeech() {
         if (!recognition) return;
         document.getElementById('speechOverlay').style.display = 'flex';
-        recognition.start();
-        initAudioVisualizer();
+        recognition.start(); initAudioVisualizer();
     }
 
     function stopSpeech() {
         const txt = document.getElementById('speechText').innerText;
-        recognition.stop();
-        if (audioContext) audioContext.close();
+        recognition.stop(); if (audioContext) audioContext.close();
         document.getElementById('speechOverlay').style.display = 'none';
         if (txt && txt !== "请说话...") {
             const final = (txt.includes("通过") || txt.includes("完成")) ? "pass" : txt;
             if(!testData[currentIdx].comments) testData[currentIdx].comments = [];
             testData[currentIdx].comments.push(`[${new Date().toLocaleString()}] ${final}`);
-            saveAndRender();
-            refreshHistoryList();
+            saveAndRender(); refreshHistoryList();
         }
     }
 
@@ -327,8 +315,7 @@
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
             analyser = audioContext.createAnalyser();
             const source = audioContext.createMediaStreamSource(stream);
-            source.connect(analyser);
-            analyser.fftSize = 32;
+            source.connect(analyser); analyser.fftSize = 32;
             dataArray = new Uint8Array(analyser.frequencyBinCount);
             function draw() {
                 if (!analyser) return;
@@ -336,40 +323,37 @@
                 analyser.getByteFrequencyData(dataArray);
                 const bars = document.querySelectorAll('.bar');
                 bars.forEach((bar, index) => {
-                    bar.style.height = (dataArray[index] / 255) * 50 + 8 + 'px';
+                    bar.style.height = (dataArray[index] / 255) * 40 + 5 + 'px';
                 });
             }
             draw();
         });
     }
 
-    // 强兼容导入
     document.getElementById('csvFile').onchange = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
+        const file = e.target.files[0]; if (!file) return;
         const reader = new FileReader();
         reader.onload = (evt) => {
             Papa.parse(evt.target.result, {
                 header: true, skipEmptyLines: true,
                 complete: (r) => {
                     const newData = r.data.map(d => {
-                        const v = d['测试场地'] || d['场地'] || '未知';
-                        const c = d['测试工况'] || d['工况'] || '未知';
-                        const comms = d['记录详情'] || d['测试记录时间内容'] || d['记录'] || "";
+                        const v = d['场地'] || d['测试场地'] || '未知';
+                        const c = d['工况'] || d['测试工况'] || '未知';
+                        const comms = d['详情'] || d['记录详情'] || "";
                         return { venue: fixText(v), condition: fixText(c), comments: comms.split(' | ').filter(x => x.trim()) };
                     });
-                    testData = [...testData, ...newData];
-                    saveAndRender();
+                    testData = [...testData, ...newData]; saveAndRender();
                 }
             });
         };
         reader.readAsText(file, 'GBK');
     };
 
-    function saveAndRender() { localStorage.setItem('V_DATA_V26', JSON.stringify(testData)); render(); }
+    function saveAndRender() { localStorage.setItem('V_DATA_V27', JSON.stringify(testData)); render(); }
     function closeSheet() { document.getElementById('actionSheet').style.display = 'none'; }
-    function onDeleteClick() { if (confirm("彻底删除该工况及所有记录？")) { testData.splice(currentIdx, 1); saveAndRender(); closeSheet(); } }
-    function createNewTest() { if (confirm("确定要清空全部测试数据吗？")) { testData = []; saveAndRender(); } }
+    function onDeleteClick() { if (confirm("删除该条工况？")) { testData.splice(currentIdx, 1); saveAndRender(); closeSheet(); } }
+    function createNewTest() { if (confirm("清空全部数据？")) { testData = []; saveAndRender(); } }
 </script>
 </body>
 </html>
