@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>车辆测试专业版 v27</title>
+    <title>车辆测试专业版 v28</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
         :root { 
@@ -15,24 +15,23 @@
         * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; outline: none; }
         body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding: env(safe-area-inset-top) 10px 100px 10px; color: var(--text); }
 
-        /* 顶部统计筛选栏 */
+        /* 统计栏 */
         .stats-bar { display: flex; gap: 6px; margin-bottom: 8px; position: sticky; top: 5px; z-index: 100; }
-        .stat-item { flex: 1; background: white; padding: 6px; border-radius: 10px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1); cursor: pointer; border: 2px solid transparent; transition: all 0.2s; }
-        .stat-item:active { transform: scale(0.95); opacity: 0.8; }
+        .stat-item { flex: 1; background: white; padding: 6px; border-radius: 10px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1); cursor: pointer; border: 2px solid transparent; transition: 0.2s; }
         .stat-item.active { border-color: var(--accent); background: #eef6ff; }
         .stat-num { display: block; font-size: 16px; font-weight: 800; }
         .stat-label { font-size: 10px; color: var(--sec); font-weight: 600; }
 
         /* 工具栏 */
-        .toolbar { background: white; border-radius: 12px; padding: 12px; margin-bottom: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); }
+        .toolbar { background: white; border-radius: 12px; padding: 12px; margin-bottom: 10px; }
         .model-input { width: 100%; padding: 8px; border: 1px dashed #ccc; background: #f9f9f9; border-radius: 8px; font-size: 16px; font-weight: 800; text-align: center; color: var(--accent); margin-bottom: 10px; }
         .search-box { width: 100%; padding: 10px; border: none; background: #f2f2f7; border-radius: 8px; font-size: 14px; margin-bottom: 8px; }
         .main-btns { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
-        .main-btns button { border: none; padding: 8px; border-radius: 6px; font-weight: 600; font-size: 11px; color: white; }
+        .main-btns button { border: none; padding: 8px; border-radius: 6px; font-weight: 600; font-size: 11px; color: white; cursor: pointer; }
 
-        /* 全色块卡片列表 */
+        /* 卡片 */
         #kanban { display: grid; gap: 6px; }
-        .card { background: var(--card-bg); border-radius: 10px; padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; align-items: center; cursor: pointer; border: 1px solid #eee; }
+        .card { background: var(--card-bg); border-radius: 10px; padding: 12px; display: flex; align-items: center; cursor: pointer; border: 1px solid #eee; }
         .card.status-pass { background: var(--pass-bg); border-color: #b7e8bc; color: var(--pass-text); }
         .card.status-fail { background: var(--fail-bg); border-color: #f5b7b7; color: var(--fail-text); }
         .venue-tag { font-size: 10px; font-weight: 800; color: white; padding: 2px 6px; border-radius: 4px; margin-right: 8px; white-space: nowrap; }
@@ -44,21 +43,20 @@
         #actionSheet { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 2000; align-items: flex-end; }
         .sheet-content { background: white; width: 100%; border-radius: 20px 20px 0 0; padding: 16px; padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
         .history-list { max-height: 350px; overflow-y: auto; background: #f2f2f7; border-radius: 10px; padding: 6px; margin-bottom: 12px; }
-        
         .hist-item-wrapper { position: relative; background: white; border-radius: 6px; margin-bottom: 4px; border: 1px solid #e5e5e5; padding: 6px 10px; }
         .hist-time { font-size: 9px; color: #999; margin-bottom: 2px; }
-        .hist-content { font-size: 13px; line-height: 1.4; width: 92%; }
-        .del-comment-btn { position: absolute; top: 50%; right: 4px; transform: translateY(-50%); color: #ff3b30; opacity: 0.2; font-size: 18px; width: 24px; height: 24px; text-align: center; }
+        .hist-content { font-size: 13px; line-height: 1.4; width: 92%; outline: none; }
+        .del-comment-btn { position: absolute; top: 50%; right: 4px; transform: translateY(-50%); color: #ff3b30; opacity: 0.3; font-size: 18px; width: 24px; text-align: center; }
 
-        /* 弹窗与语音 */
+        /* 语音 */
+        #speechOverlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 3000; flex-direction: column; align-items: center; justify-content: center; color: white; }
+        .wave-box { display: flex; align-items: center; gap: 4px; height: 40px; margin-bottom: 20px; }
+        .bar { width: 4px; background: var(--accent); border-radius: 2px; height: 5px; transition: height 0.1s; }
+
+        .sheet-btn { width: 100%; padding: 14px; margin-bottom: 8px; border-radius: 10px; border: none; font-size: 15px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 6px; }
         .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2500; align-items: center; justify-content: center; padding: 20px; }
         .modal-content { background: white; width: 100%; max-width: 400px; border-radius: 16px; padding: 20px; }
         .modal-input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 15px; margin-bottom: 12px; }
-        #speechOverlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 3000; flex-direction: column; align-items: center; justify-content: center; color: white; }
-        .wave-box { display: flex; align-items: center; gap: 4px; height: 40px; margin-bottom: 20px; }
-        .bar { width: 4px; background: var(--accent); border-radius: 2px; height: 5px; transition: height 0.1s ease; }
-
-        .sheet-btn { width: 100%; padding: 14px; margin-bottom: 8px; border-radius: 10px; border: none; font-size: 15px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 6px; }
         .fab { position: fixed; bottom: 20px; left: 15px; right: 15px; }
         .btn-add-pro { width: 100%; background: #000; color: white; padding: 16px; border-radius: 14px; font-weight: 700; border: none; font-size: 16px; }
     </style>
@@ -79,7 +77,7 @@
 
     <div class="toolbar">
         <input type="text" id="carModelInput" class="model-input" placeholder="输入测试车型..." oninput="saveModel()">
-        <input type="text" id="searchBar" class="search-box" placeholder="🔍 搜索工况名称..." oninput="render()">
+        <input type="text" id="searchBar" class="search-box" placeholder="🔍 搜索名称..." oninput="render()">
         <div class="main-btns">
             <button class="btn-import" style="background:#5856d6" onclick="document.getElementById('csvFile').click()">导入</button>
             <button class="btn-export" style="background:#ff9500" onclick="exportResults()">导出</button>
@@ -133,8 +131,7 @@
 <script>
     let testData = [];
     let currentIdx = -1;
-    let modalIsEditMode = false;
-    let currentFilter = 'all'; // all, pass, fail
+    let currentFilter = 'all'; 
     const VENUE_COLORS = ['#5856d6', '#007aff', '#34aadc', '#ff9500', '#af52de', '#ff2d55', '#1a7f37'];
     
     // 语音API
@@ -154,15 +151,14 @@
     function fixText(t) { return t ? t.replace(/[Mm]-split/gi, "μ-split").replace(/[Mm]-low/gi, "μ-low") : ""; }
 
     window.onload = () => {
-        const saved = localStorage.getItem('V_DATA_V27');
+        const saved = localStorage.getItem('V_DATA_V28');
         if (saved) testData = JSON.parse(saved);
-        document.getElementById('carModelInput').value = localStorage.getItem('V_MODEL_V27') || "";
+        document.getElementById('carModelInput').value = localStorage.getItem('V_MODEL_V28') || "";
         render();
     };
 
-    function saveModel() { localStorage.setItem('V_MODEL_V27', document.getElementById('carModelInput').value); }
+    function saveModel() { localStorage.setItem('V_MODEL_V28', document.getElementById('carModelInput').value); }
 
-    // 筛选逻辑
     function setFilter(type) {
         currentFilter = type;
         document.querySelectorAll('.stat-item').forEach(el => el.classList.remove('active'));
@@ -178,13 +174,12 @@
         let pCount = 0, fCount = 0;
 
         testData.forEach((item, i) => {
-            const lastComment = item.comments && item.comments.length > 0 ? item.comments[item.comments.length-1].toLowerCase() : "";
+            const comments = item.comments || [];
+            const lastComment = comments.length > 0 ? comments[comments.length-1].toLowerCase() : "";
             const isPass = lastComment.includes('pass');
-            const hasRecord = lastComment !== "";
+            const hasRecord = comments.length > 0;
             
             if (hasRecord) { isPass ? pCount++ : fCount++; }
-
-            // 应用筛选规则
             if (currentFilter === 'pass' && !isPass) return;
             if (currentFilter === 'fail' && (isPass || !hasRecord)) return;
             if (searchTerm && !item.venue.toLowerCase().includes(searchTerm) && !item.condition.toLowerCase().includes(searchTerm)) return;
@@ -192,13 +187,12 @@
             if (!venueMap[item.venue]) { venueMap[item.venue] = VENUE_COLORS[vColorIdx % VENUE_COLORS.length]; vColorIdx++; }
 
             const card = document.createElement('div');
-            const statusClass = hasRecord ? (isPass ? 'status-pass' : 'status-fail') : '';
-            card.className = `card ${statusClass}`;
+            card.className = `card ${hasRecord ? (isPass ? 'status-pass' : 'status-fail') : ''}`;
             card.onclick = () => openSheet(i);
             card.innerHTML = `
                 <span class="venue-tag" style="background:${venueMap[item.venue]}">${item.venue}</span>
                 <span class="condition-name">${item.condition}</span>
-                <span style="font-size:10px; opacity:0.6; margin-left:4px;">${item.comments?.length || 0}</span>
+                <span style="font-size:10px; opacity:0.6; margin-left:4px;">${comments.length}</span>
             `;
             container.appendChild(card);
         });
@@ -207,6 +201,7 @@
         document.getElementById('stat-fail').innerText = fCount;
     }
 
+    // 弹窗逻辑
     function openItemModal(isEdit) {
         modalIsEditMode = isEdit;
         if (isEdit) {
@@ -237,6 +232,7 @@
 
     function closeModal() { document.getElementById('uniModal').style.display = 'none'; }
 
+    // 详情逻辑
     function openSheet(i) {
         currentIdx = i;
         document.getElementById('sheetTitle').innerText = testData[i].condition;
@@ -248,9 +244,9 @@
         const histArea = document.getElementById('historyArea');
         const comments = testData[currentIdx].comments || [];
         histArea.innerHTML = comments.length ? comments.map((c, cIdx) => {
-            const parts = c.split('] ');
-            const time = parts[0] ? parts[0].replace('[','') : 'Record';
-            const content = parts[1] || c;
+            const splitPos = c.indexOf('] ');
+            const time = splitPos !== -1 ? c.substring(1, splitPos) : '记录';
+            const content = splitPos !== -1 ? c.substring(splitPos + 2) : c;
             return `
                 <div class="hist-item-wrapper">
                     <div class="hist-time">${time}</div>
@@ -274,13 +270,51 @@
         saveAndRender(); refreshHistoryList();
     }
 
+    // 修复后的导入逻辑
+    document.getElementById('csvFile').onchange = (e) => {
+        const file = e.target.files[0]; if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+            Papa.parse(evt.target.result, {
+                header: true, skipEmptyLines: true,
+                complete: (r) => {
+                    const newData = r.data.map(d => {
+                        const v = d['场地'] || d['测试场地'] || d['Venue'] || '未知';
+                        const c = d['工况'] || d['测试工况'] || d['Condition'] || '未知';
+                        // 寻找可能的评论字段
+                        const commsRaw = d['详情'] || d['记录详情'] || d['测试记录时间内容'] || d['记录'] || d['Comments'] || "";
+                        
+                        // 核心：重新启用分隔符解析评论列表
+                        const commentsArray = commsRaw ? commsRaw.split(' | ').filter(x => x.trim()) : [];
+                        
+                        return { 
+                            venue: fixText(v), 
+                            condition: fixText(c), 
+                            comments: commentsArray 
+                        };
+                    });
+                    testData = [...testData, ...newData]; 
+                    saveAndRender();
+                }
+            });
+        };
+        reader.readAsText(file, 'GBK');
+    };
+
     function exportResults() {
         const car = document.getElementById('carModelInput').value || "Project";
-        const ts = new Date().toISOString().replace(/[:T]/g, '').slice(0, 14);
-        const csv = Papa.unparse(testData.map(d => ({ '车型': car, '场地': d.venue, '工况': d.condition, '详情': d.comments.join(' | ') })));
+        const now = new Date();
+        const ts = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}_${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')}`;
+        const csv = Papa.unparse(testData.map(d => ({ 
+            '场地': d.venue, 
+            '工况': d.condition, 
+            '记录详情': d.comments.join(' | ') 
+        })));
         const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
-        const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
-        a.download = `${car}_报告_${ts}.csv`; a.click();
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = `${car}_报告_${ts}.csv`;
+        a.click();
     }
 
     function addManualRecord() {
@@ -302,7 +336,7 @@
         const txt = document.getElementById('speechText').innerText;
         recognition.stop(); if (audioContext) audioContext.close();
         document.getElementById('speechOverlay').style.display = 'none';
-        if (txt && txt !== "请说话...") {
+        if (txt && txt !== "正在听...") {
             const final = (txt.includes("通过") || txt.includes("完成")) ? "pass" : txt;
             if(!testData[currentIdx].comments) testData[currentIdx].comments = [];
             testData[currentIdx].comments.push(`[${new Date().toLocaleString()}] ${final}`);
@@ -330,27 +364,7 @@
         });
     }
 
-    document.getElementById('csvFile').onchange = (e) => {
-        const file = e.target.files[0]; if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-            Papa.parse(evt.target.result, {
-                header: true, skipEmptyLines: true,
-                complete: (r) => {
-                    const newData = r.data.map(d => {
-                        const v = d['场地'] || d['测试场地'] || '未知';
-                        const c = d['工况'] || d['测试工况'] || '未知';
-                        const comms = d['详情'] || d['记录详情'] || "";
-                        return { venue: fixText(v), condition: fixText(c), comments: comms.split(' | ').filter(x => x.trim()) };
-                    });
-                    testData = [...testData, ...newData]; saveAndRender();
-                }
-            });
-        };
-        reader.readAsText(file, 'GBK');
-    };
-
-    function saveAndRender() { localStorage.setItem('V_DATA_V27', JSON.stringify(testData)); render(); }
+    function saveAndRender() { localStorage.setItem('V_DATA_V28', JSON.stringify(testData)); render(); }
     function closeSheet() { document.getElementById('actionSheet').style.display = 'none'; }
     function onDeleteClick() { if (confirm("删除该条工况？")) { testData.splice(currentIdx, 1); saveAndRender(); closeSheet(); } }
     function createNewTest() { if (confirm("清空全部数据？")) { testData = []; saveAndRender(); } }
