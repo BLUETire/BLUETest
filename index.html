@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>车辆测试专业版 v28</title>
+    <title>车辆测试专业版 v29</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
         :root { 
@@ -15,7 +15,7 @@
         * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; outline: none; }
         body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; padding: env(safe-area-inset-top) 10px 100px 10px; color: var(--text); }
 
-        /* 统计栏 */
+        /* 顶部统计栏 */
         .stats-bar { display: flex; gap: 6px; margin-bottom: 8px; position: sticky; top: 5px; z-index: 100; }
         .stat-item { flex: 1; background: white; padding: 6px; border-radius: 10px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.1); cursor: pointer; border: 2px solid transparent; transition: 0.2s; }
         .stat-item.active { border-color: var(--accent); background: #eef6ff; }
@@ -29,7 +29,7 @@
         .main-btns { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
         .main-btns button { border: none; padding: 8px; border-radius: 6px; font-weight: 600; font-size: 11px; color: white; cursor: pointer; }
 
-        /* 卡片 */
+        /* 卡片列表 */
         #kanban { display: grid; gap: 6px; }
         .card { background: var(--card-bg); border-radius: 10px; padding: 12px; display: flex; align-items: center; cursor: pointer; border: 1px solid #eee; }
         .card.status-pass { background: var(--pass-bg); border-color: #b7e8bc; color: var(--pass-text); }
@@ -39,7 +39,7 @@
         .card.status-fail .venue-tag { background: rgba(139, 0, 0, 0.6); }
         .condition-name { font-size: 14px; font-weight: 700; flex: 1; }
 
-        /* 详情与紧凑评论 */
+        /* 详情/评论区 */
         #actionSheet { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 2000; align-items: flex-end; }
         .sheet-content { background: white; width: 100%; border-radius: 20px 20px 0 0; padding: 16px; padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
         .history-list { max-height: 350px; overflow-y: auto; background: #f2f2f7; border-radius: 10px; padding: 6px; margin-bottom: 12px; }
@@ -48,15 +48,17 @@
         .hist-content { font-size: 13px; line-height: 1.4; width: 92%; outline: none; }
         .del-comment-btn { position: absolute; top: 50%; right: 4px; transform: translateY(-50%); color: #ff3b30; opacity: 0.3; font-size: 18px; width: 24px; text-align: center; }
 
-        /* 语音 */
+        /* 统一弹窗 */
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2500; align-items: center; justify-content: center; padding: 20px; }
+        .modal-content { background: white; width: 100%; max-width: 400px; border-radius: 16px; padding: 20px; }
+        .modal-input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 15px; margin-bottom: 12px; }
+
+        /* 语音遮罩 */
         #speechOverlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 3000; flex-direction: column; align-items: center; justify-content: center; color: white; }
         .wave-box { display: flex; align-items: center; gap: 4px; height: 40px; margin-bottom: 20px; }
         .bar { width: 4px; background: var(--accent); border-radius: 2px; height: 5px; transition: height 0.1s; }
 
         .sheet-btn { width: 100%; padding: 14px; margin-bottom: 8px; border-radius: 10px; border: none; font-size: 15px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 6px; }
-        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 2500; align-items: center; justify-content: center; padding: 20px; }
-        .modal-content { background: white; width: 100%; max-width: 400px; border-radius: 16px; padding: 20px; }
-        .modal-input { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 15px; margin-bottom: 12px; }
         .fab { position: fixed; bottom: 20px; left: 15px; right: 15px; }
         .btn-add-pro { width: 100%; background: #000; color: white; padding: 16px; border-radius: 14px; font-weight: 700; border: none; font-size: 16px; }
     </style>
@@ -77,11 +79,11 @@
 
     <div class="toolbar">
         <input type="text" id="carModelInput" class="model-input" placeholder="输入测试车型..." oninput="saveModel()">
-        <input type="text" id="searchBar" class="search-box" placeholder="🔍 搜索名称..." oninput="render()">
+        <input type="text" id="searchBar" class="search-box" placeholder="🔍 快速过滤..." oninput="render()">
         <div class="main-btns">
             <button class="btn-import" style="background:#5856d6" onclick="document.getElementById('csvFile').click()">导入</button>
-            <button class="btn-export" style="background:#ff9500" onclick="exportResults()">导出</button>
-            <button class="btn-new" style="background:#8e8e93" onclick="createNewTest()">清空</button>
+            <button class="btn-export" style="background:#ff9500" onclick="exportResults()">导出报告</button>
+            <button class="btn-new" style="background:#8e8e93" onclick="createNewTest()">清空数据</button>
         </div>
         <input type="file" id="csvFile" accept=".csv" style="display:none">
     </div>
@@ -93,8 +95,8 @@
             <div id="sheetTitle" style="text-align:center; margin-bottom:12px; font-weight:800; color:var(--accent); font-size:16px;"></div>
             <div id="historyArea" class="history-list"></div>
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
-                <button class="sheet-btn" style="background:var(--accent); color:white;" onclick="startSpeech()">🎤 语音</button>
-                <button class="sheet-btn" style="background:#f2f2f7;" onclick="addManualRecord()">⌨️ 文字</button>
+                <button class="sheet-btn" style="background:var(--accent); color:white;" onclick="startSpeech()">🎤 语音录入</button>
+                <button class="sheet-btn" style="background:#f2f2f7;" onclick="addManualRecord()">⌨️ 文字录入</button>
             </div>
             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
                 <button class="sheet-btn" style="background:#f2f2f7; font-size:13px;" onclick="openItemModal(true)">✏️ 修改工况</button>
@@ -134,7 +136,6 @@
     let currentFilter = 'all'; 
     const VENUE_COLORS = ['#5856d6', '#007aff', '#34aadc', '#ff9500', '#af52de', '#ff2d55', '#1a7f37'];
     
-    // 语音API
     let recognition;
     let audioContext, analyser, dataArray;
     if (window.webkitSpeechRecognition || window.SpeechRecognition) {
@@ -151,13 +152,13 @@
     function fixText(t) { return t ? t.replace(/[Mm]-split/gi, "μ-split").replace(/[Mm]-low/gi, "μ-low") : ""; }
 
     window.onload = () => {
-        const saved = localStorage.getItem('V_DATA_V28');
+        const saved = localStorage.getItem('V_DATA_V29');
         if (saved) testData = JSON.parse(saved);
-        document.getElementById('carModelInput').value = localStorage.getItem('V_MODEL_V28') || "";
+        document.getElementById('carModelInput').value = localStorage.getItem('V_MODEL_V29') || "";
         render();
     };
 
-    function saveModel() { localStorage.setItem('V_MODEL_V28', document.getElementById('carModelInput').value); }
+    function saveModel() { localStorage.setItem('V_MODEL_V29', document.getElementById('carModelInput').value); }
 
     function setFilter(type) {
         currentFilter = type;
@@ -201,7 +202,6 @@
         document.getElementById('stat-fail').innerText = fCount;
     }
 
-    // 弹窗逻辑
     function openItemModal(isEdit) {
         modalIsEditMode = isEdit;
         if (isEdit) {
@@ -232,7 +232,6 @@
 
     function closeModal() { document.getElementById('uniModal').style.display = 'none'; }
 
-    // 详情逻辑
     function openSheet(i) {
         currentIdx = i;
         document.getElementById('sheetTitle').innerText = testData[i].condition;
@@ -270,9 +269,15 @@
         saveAndRender(); refreshHistoryList();
     }
 
-    // 修复后的导入逻辑
+
+    // 导入功能：加入自动提取文件名的逻辑
     document.getElementById('csvFile').onchange = (e) => {
         const file = e.target.files[0]; if (!file) return;
+        let fileName = file.name.replace(/\.[^/.]+$/, "");
+        fileName = fileName.split(/_报告_|_测试报告_/)[0];
+        document.getElementById('carModelInput').value = fileName;
+        saveModel();
+
         const reader = new FileReader();
         reader.onload = (evt) => {
             Papa.parse(evt.target.result, {
@@ -281,17 +286,9 @@
                     const newData = r.data.map(d => {
                         const v = d['场地'] || d['测试场地'] || d['Venue'] || '未知';
                         const c = d['工况'] || d['测试工况'] || d['Condition'] || '未知';
-                        // 寻找可能的评论字段
                         const commsRaw = d['详情'] || d['记录详情'] || d['测试记录时间内容'] || d['记录'] || d['Comments'] || "";
-                        
-                        // 核心：重新启用分隔符解析评论列表
                         const commentsArray = commsRaw ? commsRaw.split(' | ').filter(x => x.trim()) : [];
-                        
-                        return { 
-                            venue: fixText(v), 
-                            condition: fixText(c), 
-                            comments: commentsArray 
-                        };
+                        return { venue: fixText(v), condition: fixText(c), comments: commentsArray };
                     });
                     testData = [...testData, ...newData]; 
                     saveAndRender();
@@ -364,10 +361,11 @@
         });
     }
 
-    function saveAndRender() { localStorage.setItem('V_DATA_V28', JSON.stringify(testData)); render(); }
+    function saveAndRender() { localStorage.setItem('V_DATA_V29', JSON.stringify(testData)); render(); }
     function closeSheet() { document.getElementById('actionSheet').style.display = 'none'; }
     function onDeleteClick() { if (confirm("删除该条工况？")) { testData.splice(currentIdx, 1); saveAndRender(); closeSheet(); } }
     function createNewTest() { if (confirm("清空全部数据？")) { testData = []; saveAndRender(); } }
 </script>
 </body>
 </html>
+
